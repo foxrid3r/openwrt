@@ -22,7 +22,7 @@ BUILD_FILENAME_DATE="$(date '+%Y-%m-%d_%H-%M-%S')"
 IMAGE_NAME="invio_v${VERSION}_${BUILD_FILENAME_DATE}"
 ARCHIVE="openwrt-imagebuilder-${OPENWRT_VERSION}-${TARGET}-${SUBTARGET}.Linux-x86_64.tar.zst"
 BASE_URL="https://downloads.openwrt.org/releases/${OPENWRT_VERSION}/targets/${TARGET}/${SUBTARGET}"
-WORK_ROOT="${TMPDIR:-/tmp}/invio-openwrt-build"
+WORK_ROOT="${TMPDIR:-/tmp}/openwrt-build"
 IMAGEBUILDER_DIR="$WORK_ROOT/${ARCHIVE%.tar.zst}"
 
 for cmd in wget tar sha256sum awk grep sed make; do
@@ -80,6 +80,7 @@ update_banner_field "$BANNER_FILE" "__BUILD_DATE__" "$BUILD_DATE"
 find "$IMAGEBUILDER_DIR/files/usr/bin" "$IMAGEBUILDER_DIR/files/usr/sbin" -type f -exec chmod 0755 {} +
 chmod 0755 "$IMAGEBUILDER_DIR/files/etc/hotplug.d/block/99-usb-alias" \
            "$IMAGEBUILDER_DIR/files/etc/init.d/dhcp-reclaim" \
+           "$IMAGEBUILDER_DIR/files/etc/uci-defaults/20-set-factory-root-password" \
            "$IMAGEBUILDER_DIR/files/etc/uci-defaults/20-create-ftp-admin" \
            "$IMAGEBUILDER_DIR/files/etc/uci-defaults/95-enable-dhcp-reclaim"
 

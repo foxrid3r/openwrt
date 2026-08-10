@@ -8,7 +8,8 @@
 #   - LAN IP address (network.lan.ipaddr)
 #   - LAN netmask (network.lan.netmask)
 #   - DHCP pool start/end (dhcp.lan.start + dhcp.lan.limit)
-#   - WiFi SSID + passphrase for the AP on radio1 (auto-detected; no hard-coding)
+#   - WiFi SSID + passphrase for the AP on radio1 (machine network)
+#   - WiFi SSID + passphrase for the station on radio0 (internet/NTP uplink)
 #
 # Rules:
 # - If you press Enter on ANY prompt, that setting remains unchanged.
@@ -17,7 +18,8 @@
 # Notes:
 # - DHCP "start/end" are full IPv4 addresses within the LAN subnet (e.g. 192.168.10.50 ... 192.168.10.120).
 #   Internally dnsmasq uses start+limit, so we convert end -> limit.
-# - WiFi: select the wifi-iface attached to radio1 (if present). If multiple exist, you choose.
+# - Machine WiFi: select the AP wifi-iface attached to radio1.
+# - Internet/NTP WiFi: select the station (STA) wifi-iface attached to radio0.
 #
 # Install suggestion:
 #   /usr/sbin/provision-router
@@ -160,70 +162,30 @@ require_root() {
   [ "$(id -u)" -eq 0 ] || die "must run as root"
 }
 
-# ---- wifi selection (works for named and anonymous wifi-iface sections) ----
+# ---- wifi interface lookup ----
 
-list_radio1_candidates() {
-  # Print lines: "<uci_section_path> <ssid> <mode> <network> <device>"
-  # Prefer wifi-ifaces attached to radio1; if none exist, list all wifi-ifaces.
+find_wifi_iface() {
+  # Usage: find_wifi_iface <radio> <mode> <description>
+  #
+  # Silently finds the first wifi-iface on the requested radio using the
+  # requested mode. No network scanning or selection menu is presented.
+  radio="$1"
+  wanted_mode="$2"
+  description="$3"
 
   ifaces="$(uci -q show wireless | sed -n "s/^wireless\.\([^=]*\)=wifi-iface$/\1/p")"
-  [ -n "$ifaces" ] || return 0
-
-  have_radio1=0
-  if uci -q show wireless.radio1 >/dev/null 2>&1; then
-    have_radio1=1
-  fi
-
-  if [ "$have_radio1" -eq 1 ]; then
-    for s in $ifaces; do
-      device="$(uci -q get wireless."$s".device || true)"
-      [ "$device" = "radio1" ] || continue
-      ssid="$(uci -q get wireless."$s".ssid || true)"
-      mode="$(uci -q get wireless."$s".mode || true)"
-      network="$(uci -q get wireless."$s".network || true)"
-      echo "wireless.$s $ssid $mode $network $device"
-    done
-    return 0
-  fi
 
   for s in $ifaces; do
     device="$(uci -q get wireless."$s".device || true)"
-    ssid="$(uci -q get wireless."$s".ssid || true)"
     mode="$(uci -q get wireless."$s".mode || true)"
-    network="$(uci -q get wireless."$s".network || true)"
-    echo "wireless.$s $ssid $mode $network $device"
-  done
-}
 
-pick_wifi_iface() {
-  candidates="$(list_radio1_candidates || true)"
-  [ -n "$candidates" ] || die "no wifi-iface sections found (or none attached to radio1)"
-
-  ap_candidates="$(echo "$candidates" | awk '$3=="ap"{print}')"
-  [ -n "$ap_candidates" ] && candidates="$ap_candidates"
-
-  count="$(echo "$candidates" | awk 'END{print NR}')"
-  if [ "$count" -eq 1 ]; then
-    echo "$candidates" | awk '{print $1}'
-    return 0
-  fi
-
-  echo "Multiple WiFi interfaces found (radio1 if available). Choose one:" >&2
-  idx=1
-  echo "$candidates" | while IFS= read -r line; do
-    sec="$(echo "$line" | awk '{print $1}')"
-    ssid="$(echo "$line" | awk '{print $2}')"
-    mode="$(echo "$line" | awk '{print $3}')"
-    net="$(echo "$line" | awk '{print $4}')"
-    dev="$(echo "$line" | awk '{print $5}')"
-    echo "  $idx) $sec  (ssid='$ssid', mode='$mode', network='$net', device='$dev')" >&2
-    idx=$((idx+1))
+    if [ "$device" = "$radio" ] && [ "$mode" = "$wanted_mode" ]; then
+      echo "wireless.$s"
+      return 0
+    fi
   done
 
-  choice="$(prompt_optional "Enter selection number" "1")"
-  choice="$(clean_line "$choice")"
-  [ -n "$choice" ] || choice="1"
-  echo "$candidates" | awk -v c="$choice" 'NR==c{print $1}'
+  die "no $wanted_mode wifi-iface found on $radio for $description"
 }
 
 # ---- main ----
@@ -242,8 +204,11 @@ cur_dhcp_ignore="$(uci -q get dhcp.lan.ignore || echo 0)"
 # Default netmask if missing
 [ -n "$cur_lan_mask" ] || cur_lan_mask="255.255.255.0"
 
-wifi_section="$(pick_wifi_iface)"
+wifi_section="$(find_wifi_iface "radio1" "ap" "machine-network AP")"
 cur_ssid="$(uci -q get "$wifi_section".ssid || true)"
+
+uplink_wifi_section="$(find_wifi_iface "radio0" "sta" "internet/NTP uplink")"
+cur_uplink_ssid="$(uci -q get "$uplink_wifi_section".ssid || true)"
 
 # Track what will change
 do_host=0
@@ -252,6 +217,8 @@ do_mask=0
 do_dhcp=0
 do_ssid=0
 do_wifi_pass=0
+do_uplink_ssid=0
+do_uplink_wifi_pass=0
 do_root_pass=0
 
 new_host=""
@@ -263,6 +230,8 @@ pool_start_offset=""
 pool_limit=""
 wifi_ssid=""
 wifi_pass=""
+uplink_wifi_ssid=""
+uplink_wifi_pass=""
 root_pass=""
 
 # ---- hostname (blank = unchanged) ----
@@ -395,9 +364,23 @@ if [ -n "$ssid_in" ]; then
   do_ssid=1
 fi
 
-wifi_pass="$(prompt_secret_optional "WiFi passphrase")"
+wifi_pass="$(prompt_secret_optional "WiFi passphrase (machine AP / radio1)")"
 wifi_pass="$(clean_line "$wifi_pass")"
 [ -n "$wifi_pass" ] && do_wifi_pass=1
+
+# ---- Internet/NTP uplink WiFi SSID / passphrase (blank = unchanged) ----
+uplink_ssid_in="$(prompt_optional "Internet/NTP WiFi SSID (radio0 station)" "$cur_uplink_ssid")"
+uplink_ssid_in="$(clean_line "$uplink_ssid_in")"
+if [ -n "$uplink_ssid_in" ]; then
+  # Unlike the machine AP SSID, an upstream network is outside our control and
+  # may legitimately contain spaces, periods, or other printable characters.
+  uplink_wifi_ssid="$uplink_ssid_in"
+  do_uplink_ssid=1
+fi
+
+uplink_wifi_pass="$(prompt_secret_optional "Internet/NTP WiFi passphrase (radio0 station)")"
+uplink_wifi_pass="$(clean_line "$uplink_wifi_pass")"
+[ -n "$uplink_wifi_pass" ] && do_uplink_wifi_pass=1
 
 # ---- root password (blank = unchanged) ----
 root_pass="$(prompt_secret_optional "root password")"
@@ -416,10 +399,13 @@ if [ "$do_dhcp" -eq 1 ]; then
 else
   echo "  DHCP pool:       (unchanged)" >&2
 fi
-echo "  WiFi iface:      $wifi_section" >&2
-echo "  WiFi SSID:       $( [ "$do_ssid" -eq 1 ] && echo "$wifi_ssid (change)" || echo "$cur_ssid (unchanged)" )" >&2
-echo "  WiFi passphrase: $( [ "$do_wifi_pass" -eq 1 ] && echo "(change)" || echo "(unchanged)" )" >&2
-echo "  root password:   $( [ "$do_root_pass" -eq 1 ] && echo "(change)" || echo "(unchanged)" )" >&2
+echo "  Machine WiFi iface:      $wifi_section" >&2
+echo "  Machine WiFi SSID:       $( [ "$do_ssid" -eq 1 ] && echo "$wifi_ssid (change)" || echo "$cur_ssid (unchanged)" )" >&2
+echo "  Machine WiFi passphrase: $( [ "$do_wifi_pass" -eq 1 ] && echo "(change)" || echo "(unchanged)" )" >&2
+echo "  Uplink WiFi iface:       $uplink_wifi_section" >&2
+echo "  Uplink WiFi SSID:        $( [ "$do_uplink_ssid" -eq 1 ] && echo "$uplink_wifi_ssid (change)" || echo "$cur_uplink_ssid (unchanged)" )" >&2
+echo "  Uplink WiFi passphrase:  $( [ "$do_uplink_wifi_pass" -eq 1 ] && echo "(change)" || echo "(unchanged)" )" >&2
+echo "  root password:           $( [ "$do_root_pass" -eq 1 ] && echo "(change)" || echo "(unchanged)" )" >&2
 echo "" >&2
 
 if ! confirm "Proceed?"; then
@@ -463,11 +449,22 @@ if [ "$do_wifi_pass" -eq 1 ]; then
   uci set "$wifi_section".key="$wifi_pass"
 fi
 
+if [ "$do_uplink_ssid" -eq 1 ]; then
+  uci set "$uplink_wifi_section".ssid="$uplink_wifi_ssid"
+fi
+
+if [ "$do_uplink_wifi_pass" -eq 1 ]; then
+  # Preserve the uplink interface's configured encryption mode. The script is
+  # changing credentials only; this avoids forcing WPA2 on an uplink that may
+  # already be configured for another supported security mode.
+  uci set "$uplink_wifi_section".key="$uplink_wifi_pass"
+fi
+
 # Commit only what might have changed
 [ "$do_host" -eq 1 ] && uci commit system
 [ "$do_lan_ip" -eq 1 ] || [ "$do_mask" -eq 1 ] && uci commit network
 [ "$do_dhcp" -eq 1 ] && uci commit dhcp
-[ "$do_ssid" -eq 1 ] || [ "$do_wifi_pass" -eq 1 ] && uci commit wireless
+[ "$do_ssid" -eq 1 ] || [ "$do_wifi_pass" -eq 1 ] || [ "$do_uplink_ssid" -eq 1 ] || [ "$do_uplink_wifi_pass" -eq 1 ] && uci commit wireless
 
 # Apply changes (note: changing LAN IP can drop your SSH session)
 echo "" >&2
@@ -479,7 +476,7 @@ if [ "$do_host" -eq 1 ]; then
 fi
 
 # WiFi + network services restart only if needed
-if [ "$do_ssid" -eq 1 ] || [ "$do_wifi_pass" -eq 1 ]; then
+if [ "$do_ssid" -eq 1 ] || [ "$do_wifi_pass" -eq 1 ] || [ "$do_uplink_ssid" -eq 1 ] || [ "$do_uplink_wifi_pass" -eq 1 ]; then
   wifi reload >/dev/null 2>&1 || true
 fi
 

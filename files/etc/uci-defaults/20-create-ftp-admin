@@ -1,10 +1,34 @@
 #!/bin/sh
-# Create the FTP-only admin account without embedding a password hash in firmware.
-# Set its password after first boot with: passwd admin
-if ! grep -q '^admin:' /etc/passwd; then
-    echo 'admin:*:1000:55::/tmp:/bin/false' >> /etc/passwd
+
+# Create the factory-default FTP user.
+#
+# Factory credentials:
+#   Username: admin
+#   Password: admin
+#
+# The account uses /mnt/usb/FTP as its home directory and is intended
+# for FTP access rather than interactive shell access.
+#
+# This script is executed once by OpenWrt during the first boot.
+# A successful exit causes OpenWrt to remove the script.
+
+FTP_USER="admin"
+FTP_HOME="/mnt/usb/FTP"
+
+# Create the FTP home directory if it does not already exist.
+mkdir -p "$FTP_HOME"
+
+# Create the admin user if it does not already exist.
+if ! id "$FTP_USER" >/dev/null 2>&1; then
+    adduser \
+        -D \
+        -H \
+        -h "$FTP_HOME" \
+        -s /bin/false \
+        "$FTP_USER"
 fi
-if ! grep -q '^admin:' /etc/shadow; then
-    echo 'admin:*:0:0:99999:7:::' >> /etc/shadow
-fi
+
+# Set the factory-default FTP password.
+echo "${FTP_USER}:admin" | chpasswd
+
 exit 0
