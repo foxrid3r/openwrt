@@ -1,4 +1,4 @@
-# INVIO OpenWrt Machine Router
+# OpenWrt Machine Router
 
 Custom OpenWrt firmware configuration for the Linksys E8450 / Belkin RT3200 used as a portable industrial machine-network router.
 
@@ -20,7 +20,6 @@ Custom OpenWrt firmware configuration for the Linksys E8450 / Belkin RT3200 used
 - `build/` — reproducible firmware build script and package list
 - `files/` — OpenWrt ImageBuilder filesystem overlay
 - `docs/` — GitHub-native Markdown documentation
-- `tools/` — development/documentation utilities not installed on the router
 - `output/` — generated firmware (ignored by Git)
 
 ## Build
