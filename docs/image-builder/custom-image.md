@@ -16,7 +16,7 @@ This document describes the default configuration and installed components for t
 ## 🔐 System Access
 | Service | Username | Password |
 |---------|----------|----------|
-| **SSH / LuCI (root)** | `root` | `<SET-A-STRONG-PASSWORD>` |
+| **SSH / LuCI (root)** | `root` | `Admin12345!` |
 
 > ⚠️ **Important:** Change default credentials before deploying on a live network.
 
@@ -27,7 +27,7 @@ This document describes the default configuration and installed components for t
 | Setting | Value |
 |--------|-------|
 | **SSID** | `Spare1` |
-| **WiFi Password** | `<SET-A-STRONG-PASSWORD>` |
+| **WiFi Password** | `Admin12345!` |
 
 ---
 
@@ -179,7 +179,7 @@ An FTP server is enabled for file transfer via USB storage.
 |--------|-------|
 | **FTP Service** | Enabled |
 | **Username** | `admin` |
-| **Password** | `<SET-A-PASSWORD>` |
+| **Password** | `admin` |
 | **User Access** | Jailed (restricted) to USB storage |
 
 ### 💾 USB Drive Requirements
