@@ -36,7 +36,15 @@ cd "$WORK_ROOT"
 echo "Downloading OpenWrt ImageBuilder ${OPENWRT_VERSION}..."
 wget -q --show-progress "$BASE_URL/$ARCHIVE"
 wget -q "$BASE_URL/sha256sums"
-grep "  ${ARCHIVE}$" sha256sums | sha256sum -c -
+
+CHECKSUM_LINE="$(grep -F "$ARCHIVE" sha256sums || true)"
+
+if [[ -z "$CHECKSUM_LINE" ]]; then
+    echo "ERROR: Could not find checksum for $ARCHIVE" >&2
+    exit 1
+fi
+
+echo "$CHECKSUM_LINE" | sha256sum -c -
 
 tar --zstd -xf "$ARCHIVE"
 cp -a "$OVERLAY_DIR" "$IMAGEBUILDER_DIR/files"
