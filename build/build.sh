@@ -80,7 +80,7 @@ update_banner_field "$BANNER_FILE" "__BUILD_DATE__" "$BUILD_DATE"
 find "$IMAGEBUILDER_DIR/files/usr/bin" "$IMAGEBUILDER_DIR/files/usr/sbin" -type f -exec chmod 0755 {} +
 chmod 0755 "$IMAGEBUILDER_DIR/files/etc/hotplug.d/block/99-usb-alias" \
            "$IMAGEBUILDER_DIR/files/etc/init.d/dhcp-reclaim" \
-           "$IMAGEBUILDER_DIR/files/etc/uci-defaults/20-set-factory-root-password" \
+           "$IMAGEBUILDER_DIR/files/etc/uci-defaults/15-set-factory-root-password" \
            "$IMAGEBUILDER_DIR/files/etc/uci-defaults/20-create-ftp-admin" \
            "$IMAGEBUILDER_DIR/files/etc/uci-defaults/95-enable-dhcp-reclaim"
 
