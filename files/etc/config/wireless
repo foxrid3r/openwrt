@@ -1,0 +1,33 @@
+
+config wifi-device 'radio0'
+	option type 'mac80211'
+	option path 'platform/18000000.wmac'
+	option band '2g'
+	option htmode 'HT20'
+	option cell_density '0'
+	option channel '6'
+
+config wifi-device 'radio1'
+	option type 'mac80211'
+	option path '1a143000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0'
+	option channel 'auto'
+	option band '5g'
+	option htmode 'HE80'
+	option cell_density '0'
+
+config wifi-iface 'wifinet2'
+	option device 'radio1'
+	option mode 'ap'
+	option ssid 'CHANGE_ME_LAN'
+	option encryption 'psk2'
+	option key 'CHANGE_ME_PASSWORD'
+	option network 'lan'
+
+config wifi-iface 'wifinet1'
+	option device 'radio0'
+	option mode 'sta'
+	option network 'wwan_guest'
+	option ssid 'CHANGE_ME_UPLINK'
+	option encryption 'psk2'
+	option key 'CHANGE_ME_PASSWORD'
+

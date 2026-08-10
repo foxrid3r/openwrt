@@ -1,0 +1,38 @@
+#!/bin/sh
+# Watch dnsmasq output and invoke reclaim-dhcp-lease only when the DHCP pool
+# reports exhaustion. procd supervises and restarts this process.
+
+TAG="dhcp-reclaim"
+COOLDOWN_FILE="/tmp/dhcp-reclaim-last-run"
+COOLDOWN_SECONDS=10
+
+logger -t "$TAG" "DHCP exhaustion watcher started"
+
+logread -f | while IFS= read -r line; do
+    case "$line" in
+        *dnsmasq-dhcp*"no address available"*|\
+        *dnsmasq-dhcp*"no addresses available"*|\
+        *dnsmasq-dhcp*"no address range available"*)
+            now="$(date +%s)"
+            last_run=0
+
+            if [ -r "$COOLDOWN_FILE" ]; then
+                read -r last_run < "$COOLDOWN_FILE"
+            fi
+
+            case "$last_run" in
+                ''|*[!0-9]*) last_run=0 ;;
+            esac
+
+            elapsed=$((now - last_run))
+            [ "$elapsed" -lt "$COOLDOWN_SECONDS" ] && continue
+
+            printf '%s\n' "$now" > "$COOLDOWN_FILE"
+            logger -t "$TAG" "DHCP pool exhaustion detected"
+
+            if ! /usr/sbin/reclaim-dhcp-lease; then
+                logger -t "$TAG" "DHCP lease reclamation attempt failed"
+            fi
+            ;;
+    esac
+done

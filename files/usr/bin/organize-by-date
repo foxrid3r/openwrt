@@ -1,0 +1,47 @@
+#!/bin/sh
+
+# organize-by-date.sh
+# Organizes files in a directory into YYYY-MM-DD folders
+# based on each file's Last Modified date.
+
+TARGET_DIR="$1"
+
+if [ -z "$TARGET_DIR" ]; then
+    echo "Usage: $0 /path/to/directory"
+    exit 1
+fi
+
+if [ ! -d "$TARGET_DIR" ]; then
+    echo "Error: '$TARGET_DIR' is not a directory."
+    exit 1
+fi
+
+TARGET_DIR="$(readlink -f "$TARGET_DIR")"
+
+case "$TARGET_DIR" in
+    "/mnt/usb/FTP"|"/mnt/usb/FTP/"*|\
+    "/mnt/sda1/FTP"|"/mnt/sda1/FTP/"*|\
+    "/mnt/sdb1/FTP"|"/mnt/sdb1/FTP/"*)
+        ;;
+    *)
+        echo "Error: Invalid directory to organize files in."
+        echo "Allowed directories:"
+        echo "  /mnt/usb/FTP"
+        echo "  /mnt/sda1/FTP"
+        echo "  /mnt/sdb1/FTP"
+        exit 1
+        ;;
+esac
+
+cd "$TARGET_DIR" || exit 1
+
+for file in *; do
+    [ -e "$file" ] || continue
+    [ -f "$file" ] || continue
+
+    folder="$(date -r "$file" '+%Y-%m-%d')"
+    mkdir -p "$folder"
+    mv "$file" "$folder/"
+done
+
+echo "Done organizing files in: $TARGET_DIR"

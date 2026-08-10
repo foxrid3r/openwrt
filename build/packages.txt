@@ -1,0 +1,14 @@
+block-mount
+gdisk
+nano
+vsftpd
+kmod-fs-exfat
+kmod-usb-storage
+kmod-usb3
+kmod-usb-storage-uas
+usbutils
+libblkid
+kmod-nft-bridge
+nftables
+luci
+exfat-fsck

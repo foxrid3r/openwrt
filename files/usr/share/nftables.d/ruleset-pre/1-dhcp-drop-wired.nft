@@ -1,0 +1,28 @@
+table bridge filter
+flush table bridge filter
+
+table bridge filter {
+    chain input {
+        type filter hook input priority -200; policy accept;
+
+        # Allow DHCP DISCOVER/REQUEST from Cognex devices on wired ports
+        iifname { "lan1", "lan2", "lan3", "lan4" } \
+            ether saddr & ff:ff:ff:00:00:00 == 00:d0:24:00:00:00 \
+            ip protocol udp udp dport 67 counter accept
+
+        # Drop all other DHCP client->server on wired ports
+        iifname { "lan1", "lan2", "lan3", "lan4" } ip protocol udp udp dport 67 counter drop
+    }
+
+    chain output {
+        type filter hook output priority 100; policy accept;
+
+        # Allow DHCP OFFER/ACK to Cognex devices on wired ports
+        oifname { "lan1", "lan2", "lan3", "lan4" } \
+            ether daddr & ff:ff:ff:00:00:00 == 00:d0:24:00:00:00 \
+            ip protocol udp udp sport 67 counter accept
+
+        # Drop all other DHCP server->client on wired ports
+        oifname { "lan1", "lan2", "lan3", "lan4" } ip protocol udp udp sport 67 counter drop
+    }
+}

@@ -1,0 +1,10 @@
+#!/bin/sh
+# Create the FTP-only admin account without embedding a password hash in firmware.
+# Set its password after first boot with: passwd admin
+if ! grep -q '^admin:' /etc/passwd; then
+    echo 'admin:*:1000:55::/tmp:/bin/false' >> /etc/passwd
+fi
+if ! grep -q '^admin:' /etc/shadow; then
+    echo 'admin:*:0:0:99999:7:::' >> /etc/shadow
+fi
+exit 0

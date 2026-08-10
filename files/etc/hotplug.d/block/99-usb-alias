@@ -1,0 +1,73 @@
+#!/bin/sh
+# /etc/hotplug.d/block/99-usb-alias
+# Mount exFAT partitions at /mnt/usb on add, unmount on remove/unbind.
+
+set -eu
+
+MOUNTPOINT="/mnt/usb"
+log() { logger -t hotplug-usb "$*"; }
+
+# Only care about partitions (not whole disks)
+[ "${DEVTYPE:-}" = "partition" ] || exit 0
+
+DEV="/dev/${DEVNAME:-}"
+
+mkdir -p "$MOUNTPOINT"
+
+# Helper: return the current device mounted at MOUNTPOINT (blank if not mounted)
+mounted_dev() {
+  awk -v mp="$MOUNTPOINT" '$2==mp {print $1; exit}' /proc/mounts || true
+}
+
+case "${ACTION:-}" in
+  add)
+    # If already mounted there, do nothing
+    if grep -qs " $MOUNTPOINT " /proc/mounts; then
+      log "Already mounted at $MOUNTPOINT ($(mounted_dev))"
+      exit 0
+    fi
+
+    # Only mount exFAT
+    TYPE="$(block info "$DEV" 2>/dev/null | sed -n 's/.*TYPE="\([^"]*\)".*/\1/p')"
+    [ "$TYPE" = "exfat" ] || exit 0
+
+    # NOTE: kernel exFAT does NOT support "flush" (your log shows this).
+    # If you want max safety and accept slower writes, add ",sync".
+    if mount -t exfat -o rw,noatime,uid=1000,gid=55,umask=0007 "$DEV" "$MOUNTPOINT"; then
+      log "Mounted $DEV at $MOUNTPOINT (uid=1000 gid=55 umask=0007)"
+    else
+      log "FAILED to mount $DEV at $MOUNTPOINT"
+    fi
+    ;;
+
+  remove|unbind)
+    cur="$(mounted_dev)"
+    if [ -n "$cur" ]; then
+      # Only unmount if the mounted device is the one being removed.
+      # (Prevents accidental unmount of some other device.)
+      if [ "$cur" = "$DEV" ]; then
+        sync || true
+        if umount "$MOUNTPOINT" 2>/dev/null; then
+          sync || true
+          log "Unmounted $MOUNTPOINT ($DEV)"
+        else
+          /sbin/block umount "$DEV" 2>/dev/null || /sbin/block umount 2>/dev/null || true
+          sync || true
+          if [ -z "$(mounted_dev)" ]; then
+            log "Unmounted $MOUNTPOINT ($DEV) via block umount"
+          else
+            log "FAILED to unmount $MOUNTPOINT ($DEV) (device may have disappeared)"
+          fi
+        fi
+      else
+        log "Not unmounting: $MOUNTPOINT is mounted from $cur, removal event is for $DEV"
+      fi
+    fi
+    ;;
+
+  *)
+    exit 0
+    ;;
+esac
+
+exit 0

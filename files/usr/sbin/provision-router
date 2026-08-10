@@ -1,0 +1,503 @@
+#!/bin/sh
+# provision-router.sh
+#
+# Interactive "project provisioning" script for OpenWrt.
+# Prompts for (blank = unchanged):
+#   - Hostname
+#   - root password
+#   - LAN IP address (network.lan.ipaddr)
+#   - LAN netmask (network.lan.netmask)
+#   - DHCP pool start/end (dhcp.lan.start + dhcp.lan.limit)
+#   - WiFi SSID + passphrase for the AP on radio1 (auto-detected; no hard-coding)
+#
+# Rules:
+# - If you press Enter on ANY prompt, that setting remains unchanged.
+# - Hostname and SSID may include underscores. Periods are NOT allowed.
+#
+# Notes:
+# - DHCP "start/end" are full IPv4 addresses within the LAN subnet (e.g. 192.168.10.50 ... 192.168.10.120).
+#   Internally dnsmasq uses start+limit, so we convert end -> limit.
+# - WiFi: select the wifi-iface attached to radio1 (if present). If multiple exist, you choose.
+#
+# Install suggestion:
+#   /usr/sbin/provision-router
+#   chmod +x /usr/sbin/provision-router
+
+set -eu
+
+# Fragmented DHCP pools created by the separate set-dhcp-range utility use this file.
+# When provision-router sets a DHCP range, it intentionally restores the standard
+# consecutive OpenWrt/UCI DHCP pool and removes this custom fragmented range file.
+CUSTOM_DHCP_RANGES="/etc/dnsmasq.d/custom-ranges.conf"
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+need_cmd() { command -v "$1" >/dev/null 2>&1 || die "missing required command: $1"; }
+
+need_cmd uci
+need_cmd passwd
+need_cmd awk
+need_cmd sed
+need_cmd grep
+need_cmd cut
+
+# ---- helpers ----
+
+clean_line() {
+  # Remove CR (Windows line endings), trim leading/trailing whitespace
+  printf "%s" "$1" | sed 's/\r//g; s/^[[:space:]]\+//; s/[[:space:]]\+$//'
+}
+
+clean_name_nodot_allow_underscore() {
+  # For hostname + SSID:
+  # - Allow: A-Z a-z 0-9 _ -
+  # - Disallow: dots/periods
+  # - Trim spaces + CR
+  # - Strip leading/trailing '-' or '_' to avoid weirdness
+  n="$(clean_line "$1")"
+  n="$(printf "%s" "$n" | sed 's/[^A-Za-z0-9_-]//g; s/^[-_]\+//; s/[-_]\+$//')"
+  printf "%s" "$n"
+}
+
+is_ipv4() {
+  echo "$1" | awk -F. '
+    NF!=4 {exit 1}
+    {
+      for(i=1;i<=4;i++){
+        if($i !~ /^[0-9]+$/) exit 1
+        if($i<0 || $i>255) exit 1
+      }
+    }
+    END{exit 0}'
+}
+
+ip_to_int() {
+  echo "$1" | awk -F. '{print ($1*256*256*256)+($2*256*256)+($3*256)+$4}'
+}
+
+# Safe integer math via awk (avoids ash overflow / syntax issues on large IPv4 ints)
+awk_and() { awk -v a="$1" -v b="$2" 'BEGIN{printf "%.0f", and(a,b)}'; }
+awk_add() { awk -v a="$1" -v b="$2" 'BEGIN{printf "%.0f", (a+b)}'; }
+awk_sub() { awk -v a="$1" -v b="$2" 'BEGIN{printf "%.0f", (a-b)}'; }
+awk_le()  { awk -v a="$1" -v b="$2" 'BEGIN{exit (a<=b)?0:1}'; }
+awk_eq()  { awk -v a="$1" -v b="$2" 'BEGIN{exit (a==b)?0:1}'; }
+
+int_to_ip() {
+  awk -v n="$1" 'BEGIN{
+    o1=int(n/(256*256*256)); n-=o1*256*256*256;
+    o2=int(n/(256*256));     n-=o2*256*256;
+    o3=int(n/256);           n-=o3*256;
+    o4=n;
+    print o1"."o2"."o3"."o4;
+  }'
+}
+
+mask_to_prefix() {
+  case "$1" in
+    255.0.0.0) echo 8 ;;
+    255.128.0.0) echo 9 ;;
+    255.192.0.0) echo 10 ;;
+    255.224.0.0) echo 11 ;;
+    255.240.0.0) echo 12 ;;
+    255.248.0.0) echo 13 ;;
+    255.252.0.0) echo 14 ;;
+    255.254.0.0) echo 15 ;;
+    255.255.0.0) echo 16 ;;
+    255.255.128.0) echo 17 ;;
+    255.255.192.0) echo 18 ;;
+    255.255.224.0) echo 19 ;;
+    255.255.240.0) echo 20 ;;
+    255.255.248.0) echo 21 ;;
+    255.255.252.0) echo 22 ;;
+    255.255.254.0) echo 23 ;;
+    255.255.255.0) echo 24 ;;
+    255.255.255.128) echo 25 ;;
+    255.255.255.192) echo 26 ;;
+    255.255.255.224) echo 27 ;;
+    255.255.255.240) echo 28 ;;
+    255.255.255.248) echo 29 ;;
+    255.255.255.252) echo 30 ;;
+    255.255.255.254) echo 31 ;;
+    255.255.255.255) echo 32 ;;
+    *) echo "" ;;
+  esac
+}
+
+prompt_optional() {
+  # Prints raw user input (blank allowed). Shows current value as [..] when provided.
+  label="$1"
+  current="${2:-}"
+  if [ -n "$current" ]; then
+    printf "%s [%s] (blank = unchanged): " "$label" "$current" >&2
+  else
+    printf "%s (blank = unchanged): " "$label" >&2
+  fi
+  IFS= read -r ans
+  printf "%s" "$ans"
+}
+
+prompt_secret_optional() {
+  label="$1"
+  printf "%s (blank = unchanged): " "$label" >&2
+  stty -echo 2>/dev/null || true
+  IFS= read -r ans
+  stty echo 2>/dev/null || true
+  printf "\n" >&2
+  printf "%s" "$ans"
+}
+
+confirm() {
+  q="$1"
+  printf "%s [y/N]: " "$q" >&2
+  IFS= read -r a
+  case "$a" in
+    y|Y|yes|YES) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+require_root() {
+  [ "$(id -u)" -eq 0 ] || die "must run as root"
+}
+
+# ---- wifi selection (works for named and anonymous wifi-iface sections) ----
+
+list_radio1_candidates() {
+  # Print lines: "<uci_section_path> <ssid> <mode> <network> <device>"
+  # Prefer wifi-ifaces attached to radio1; if none exist, list all wifi-ifaces.
+
+  ifaces="$(uci -q show wireless | sed -n "s/^wireless\.\([^=]*\)=wifi-iface$/\1/p")"
+  [ -n "$ifaces" ] || return 0
+
+  have_radio1=0
+  if uci -q show wireless.radio1 >/dev/null 2>&1; then
+    have_radio1=1
+  fi
+
+  if [ "$have_radio1" -eq 1 ]; then
+    for s in $ifaces; do
+      device="$(uci -q get wireless."$s".device || true)"
+      [ "$device" = "radio1" ] || continue
+      ssid="$(uci -q get wireless."$s".ssid || true)"
+      mode="$(uci -q get wireless."$s".mode || true)"
+      network="$(uci -q get wireless."$s".network || true)"
+      echo "wireless.$s $ssid $mode $network $device"
+    done
+    return 0
+  fi
+
+  for s in $ifaces; do
+    device="$(uci -q get wireless."$s".device || true)"
+    ssid="$(uci -q get wireless."$s".ssid || true)"
+    mode="$(uci -q get wireless."$s".mode || true)"
+    network="$(uci -q get wireless."$s".network || true)"
+    echo "wireless.$s $ssid $mode $network $device"
+  done
+}
+
+pick_wifi_iface() {
+  candidates="$(list_radio1_candidates || true)"
+  [ -n "$candidates" ] || die "no wifi-iface sections found (or none attached to radio1)"
+
+  ap_candidates="$(echo "$candidates" | awk '$3=="ap"{print}')"
+  [ -n "$ap_candidates" ] && candidates="$ap_candidates"
+
+  count="$(echo "$candidates" | awk 'END{print NR}')"
+  if [ "$count" -eq 1 ]; then
+    echo "$candidates" | awk '{print $1}'
+    return 0
+  fi
+
+  echo "Multiple WiFi interfaces found (radio1 if available). Choose one:" >&2
+  idx=1
+  echo "$candidates" | while IFS= read -r line; do
+    sec="$(echo "$line" | awk '{print $1}')"
+    ssid="$(echo "$line" | awk '{print $2}')"
+    mode="$(echo "$line" | awk '{print $3}')"
+    net="$(echo "$line" | awk '{print $4}')"
+    dev="$(echo "$line" | awk '{print $5}')"
+    echo "  $idx) $sec  (ssid='$ssid', mode='$mode', network='$net', device='$dev')" >&2
+    idx=$((idx+1))
+  done
+
+  choice="$(prompt_optional "Enter selection number" "1")"
+  choice="$(clean_line "$choice")"
+  [ -n "$choice" ] || choice="1"
+  echo "$candidates" | awk -v c="$choice" 'NR==c{print $1}'
+}
+
+# ---- main ----
+
+require_root
+echo "=== OpenWrt Project Provisioning ===" >&2
+
+# Current values (used as "unchanged" defaults)
+cur_host="$(uci -q get system.@system[0].hostname || true)"
+cur_lan_ip="$(uci -q get network.lan.ipaddr || true)"
+cur_lan_mask="$(uci -q get network.lan.netmask || true)"
+cur_dhcp_start="$(uci -q get dhcp.lan.start || true)"
+cur_dhcp_limit="$(uci -q get dhcp.lan.limit || true)"
+cur_dhcp_ignore="$(uci -q get dhcp.lan.ignore || echo 0)"
+
+# Default netmask if missing
+[ -n "$cur_lan_mask" ] || cur_lan_mask="255.255.255.0"
+
+wifi_section="$(pick_wifi_iface)"
+cur_ssid="$(uci -q get "$wifi_section".ssid || true)"
+
+# Track what will change
+do_host=0
+do_lan_ip=0
+do_mask=0
+do_dhcp=0
+do_ssid=0
+do_wifi_pass=0
+do_root_pass=0
+
+new_host=""
+new_lan_ip=""
+new_mask=""
+pool_start_ip=""
+pool_end_ip=""
+pool_start_offset=""
+pool_limit=""
+wifi_ssid=""
+wifi_pass=""
+root_pass=""
+
+# ---- hostname (blank = unchanged) ----
+host_in="$(prompt_optional "Hostname" "$cur_host")"
+host_in="$(clean_line "$host_in")"
+if [ -n "$host_in" ]; then
+  new_host="$(clean_name_nodot_allow_underscore "$host_in")"
+  [ -n "$new_host" ] || die "hostname became empty after sanitizing input"
+  do_host=1
+fi
+
+# ---- LAN IP (blank = unchanged) ----
+while :; do
+  ip_in="$(prompt_optional "LAN IP address (interface 'lan')" "$cur_lan_ip")"
+  ip_in="$(clean_line "$ip_in")"
+  if [ -z "$ip_in" ]; then
+    new_lan_ip="$cur_lan_ip"
+    break
+  fi
+  if is_ipv4 "$ip_in"; then
+    new_lan_ip="$ip_in"
+    do_lan_ip=1
+    break
+  fi
+  echo "Invalid IPv4 address. Try again." >&2
+done
+
+# ---- netmask (blank = unchanged) ----
+while :; do
+  mask_in="$(prompt_optional "LAN netmask" "$cur_lan_mask")"
+  mask_in="$(clean_line "$mask_in")"
+  if [ -z "$mask_in" ]; then
+    new_mask="$cur_lan_mask"
+    break
+  fi
+  if is_ipv4 "$mask_in" && [ -n "$(mask_to_prefix "$mask_in")" ]; then
+    new_mask="$mask_in"
+    do_mask=1
+    break
+  fi
+  echo "Invalid netmask. Must be contiguous (e.g. 255.255.255.0). Try again." >&2
+done
+
+prefix="$(mask_to_prefix "$new_mask")"
+[ -n "$prefix" ] || die "internal error: could not derive prefix from netmask '$new_mask'"
+
+# ---- DHCP pool start/end (blank = unchanged) ----
+# Compute defaults from current dhcp start/limit (if present)
+default_pool_start_ip=""
+default_pool_end_ip=""
+if [ "$cur_dhcp_ignore" != "1" ] && [ -n "$cur_lan_ip" ] && is_ipv4 "$cur_lan_ip" && [ -n "$cur_dhcp_start" ] && [ -n "$cur_dhcp_limit" ]; then
+  lan_int="$(ip_to_int "$cur_lan_ip")"
+  mask_int="$(ip_to_int "$cur_lan_mask")"
+  net_int="$(awk_and "$lan_int" "$mask_int")"
+  start_int="$(awk_add "$net_int" "$cur_dhcp_start")"
+  end_int="$(awk -v s="$start_int" -v l="$cur_dhcp_limit" 'BEGIN{printf "%.0f", (s + l - 1)}')"
+  default_pool_start_ip="$(int_to_ip "$start_int")"
+  default_pool_end_ip="$(int_to_ip "$end_int")"
+fi
+
+if [ "$cur_dhcp_ignore" = "1" ] && [ -f "$CUSTOM_DHCP_RANGES" ]; then
+  echo "" >&2
+  echo "NOTE: Fragmented DHCP ranges currently appear to be configured." >&2
+  echo "provision-router only sets a standard consecutive OpenWrt/UCI DHCP pool." >&2
+  echo "Leave the DHCP prompts blank to keep the fragmented pool unchanged." >&2
+  echo "Enter a DHCP start/end range to replace fragmented mode with a consecutive pool." >&2
+  echo "" >&2
+fi
+
+while :; do
+  ps_in="$(prompt_optional "DHCP pool start address" "$default_pool_start_ip")"
+  ps_in="$(clean_line "$ps_in")"
+  pe_in="$(prompt_optional "DHCP pool end address" "$default_pool_end_ip")"
+  pe_in="$(clean_line "$pe_in")"
+
+  # If BOTH blank => unchanged
+  if [ -z "$ps_in" ] && [ -z "$pe_in" ]; then
+    do_dhcp=0
+    break
+  fi
+
+  # If one blank but not the other => re-prompt (avoid partial updates)
+  if [ -z "$ps_in" ] || [ -z "$pe_in" ]; then
+    echo "Enter BOTH start and end, or leave BOTH blank to keep unchanged." >&2
+    continue
+  fi
+
+  is_ipv4 "$ps_in" || { echo "Invalid start IPv4 address. Try again." >&2; continue; }
+  is_ipv4 "$pe_in" || { echo "Invalid end IPv4 address. Try again." >&2; continue; }
+
+  # validate both are in same subnet as new_lan_ip/new_mask
+  lan_i="$(ip_to_int "$new_lan_ip")"
+  mask_i="$(ip_to_int "$new_mask")"
+  net_i="$(awk_and "$lan_i" "$mask_i")"
+  ps_i="$(ip_to_int "$ps_in")"
+  pe_i="$(ip_to_int "$pe_in")"
+
+  if ! awk_le "$ps_i" "$pe_i"; then
+    echo "Start address must be <= end address. Try again." >&2
+    continue
+  fi
+
+  ps_net="$(awk_and "$ps_i" "$mask_i")"
+  pe_net="$(awk_and "$pe_i" "$mask_i")"
+  if ! awk_eq "$ps_net" "$net_i" || ! awk_eq "$pe_net" "$net_i"; then
+    echo "DHCP pool must be within the LAN subnet ($new_lan_ip/$prefix). Try again." >&2
+    continue
+  fi
+
+  # avoid including router IP in pool
+  if awk_le "$ps_i" "$lan_i" && awk_le "$lan_i" "$pe_i"; then
+    echo "DHCP pool cannot include the router LAN IP ($new_lan_ip). Try again." >&2
+    continue
+  fi
+
+  pool_start_ip="$ps_in"
+  pool_end_ip="$pe_in"
+  pool_start_offset="$(awk_sub "$ps_i" "$net_i")"
+  pool_limit="$(awk -v ps="$ps_i" -v pe="$pe_i" 'BEGIN{printf "%.0f", (pe - ps + 1)}')"
+  do_dhcp=1
+  break
+done
+
+# ---- WiFi SSID / passphrase (blank = unchanged) ----
+ssid_in="$(prompt_optional "WiFi SSID (radio1 interface)" "$cur_ssid")"
+ssid_in="$(clean_line "$ssid_in")"
+if [ -n "$ssid_in" ]; then
+  wifi_ssid="$(clean_name_nodot_allow_underscore "$ssid_in")"
+  [ -n "$wifi_ssid" ] || die "WiFi SSID became empty after sanitizing input"
+  do_ssid=1
+fi
+
+wifi_pass="$(prompt_secret_optional "WiFi passphrase")"
+wifi_pass="$(clean_line "$wifi_pass")"
+[ -n "$wifi_pass" ] && do_wifi_pass=1
+
+# ---- root password (blank = unchanged) ----
+root_pass="$(prompt_secret_optional "root password")"
+root_pass="$(clean_line "$root_pass")"
+[ -n "$root_pass" ] && do_root_pass=1
+
+# ---- summary ----
+echo "" >&2
+echo "About to apply (only items marked 'change' will be modified):" >&2
+echo "  Hostname:        $( [ "$do_host" -eq 1 ] && echo "$new_host (change)" || echo "$cur_host (unchanged)" )" >&2
+echo "  LAN IP:          $( [ "$do_lan_ip" -eq 1 ] && echo "$new_lan_ip (change)" || echo "$cur_lan_ip (unchanged)" )" >&2
+echo "  LAN netmask:     $( [ "$do_mask" -eq 1 ] && echo "$new_mask (change)" || echo "$cur_lan_mask (unchanged)" )  (/$prefix)" >&2
+if [ "$do_dhcp" -eq 1 ]; then
+  echo "  DHCP pool:       $pool_start_ip  ->  $pool_end_ip (change)" >&2
+  echo "  DHCP uci:        dhcp.lan.start=$pool_start_offset  dhcp.lan.limit=$pool_limit" >&2
+else
+  echo "  DHCP pool:       (unchanged)" >&2
+fi
+echo "  WiFi iface:      $wifi_section" >&2
+echo "  WiFi SSID:       $( [ "$do_ssid" -eq 1 ] && echo "$wifi_ssid (change)" || echo "$cur_ssid (unchanged)" )" >&2
+echo "  WiFi passphrase: $( [ "$do_wifi_pass" -eq 1 ] && echo "(change)" || echo "(unchanged)" )" >&2
+echo "  root password:   $( [ "$do_root_pass" -eq 1 ] && echo "(change)" || echo "(unchanged)" )" >&2
+echo "" >&2
+
+if ! confirm "Proceed?"; then
+  echo "Aborted." >&2
+  exit 0
+fi
+
+# ---- apply UCI changes ----
+
+if [ "$do_host" -eq 1 ]; then
+  uci set system.@system[0].hostname="$new_host"
+fi
+
+if [ "$do_lan_ip" -eq 1 ]; then
+  uci set network.lan.ipaddr="$new_lan_ip"
+fi
+
+if [ "$do_mask" -eq 1 ]; then
+  uci set network.lan.netmask="$new_mask"
+fi
+
+if [ "$do_dhcp" -eq 1 ]; then
+  # provision-router only manages the standard consecutive OpenWrt/UCI DHCP pool.
+  # If fragmented DHCP was previously enabled, remove the ignore flag so the
+  # standard start/limit pool becomes active again.
+  uci -q delete dhcp.lan.ignore || true
+
+  uci set dhcp.lan.start="$pool_start_offset"
+  uci set dhcp.lan.limit="$pool_limit"
+
+  # Remove the custom fragmented range file used by set-dhcp-range, if present.
+  rm -f "$CUSTOM_DHCP_RANGES"
+fi
+
+if [ "$do_ssid" -eq 1 ]; then
+  uci set "$wifi_section".ssid="$wifi_ssid"
+fi
+
+if [ "$do_wifi_pass" -eq 1 ]; then
+  uci set "$wifi_section".encryption="psk2"
+  uci set "$wifi_section".key="$wifi_pass"
+fi
+
+# Commit only what might have changed
+[ "$do_host" -eq 1 ] && uci commit system
+[ "$do_lan_ip" -eq 1 ] || [ "$do_mask" -eq 1 ] && uci commit network
+[ "$do_dhcp" -eq 1 ] && uci commit dhcp
+[ "$do_ssid" -eq 1 ] || [ "$do_wifi_pass" -eq 1 ] && uci commit wireless
+
+# Apply changes (note: changing LAN IP can drop your SSH session)
+echo "" >&2
+echo "Applying changes (network restart may disconnect you if LAN IP changed)..." >&2
+
+# Hostname update immediately (so LuCI header updates)
+if [ "$do_host" -eq 1 ]; then
+  /etc/init.d/system reload 2>/dev/null || /etc/init.d/system restart
+fi
+
+# WiFi + network services restart only if needed
+if [ "$do_ssid" -eq 1 ] || [ "$do_wifi_pass" -eq 1 ]; then
+  wifi reload >/dev/null 2>&1 || true
+fi
+
+if [ "$do_dhcp" -eq 1 ]; then
+  /etc/init.d/dnsmasq restart >/dev/null 2>&1 || true
+fi
+
+if [ "$do_lan_ip" -eq 1 ] || [ "$do_mask" -eq 1 ]; then
+  /etc/init.d/network restart >/dev/null 2>&1 || true
+fi
+
+# Set root password last (does not affect network)
+if [ "$do_root_pass" -eq 1 ]; then
+  echo -e "$root_pass\n$root_pass" | passwd root >/dev/null
+fi
+
+echo "" >&2
+echo "Provisioning complete." >&2
+if [ "$do_lan_ip" -eq 1 ]; then
+  echo "If you changed the LAN IP, reconnect using: ssh root@$new_lan_ip" >&2
+fi

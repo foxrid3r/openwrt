@@ -1,0 +1,36 @@
+# OpenWrt ImageBuilder downloads/worktrees
+openwrt-imagebuilder-*/
+openwrt-imagebuilder-*.tar.zst
+
+# Build output
+/output/
+/bin/
+*.itb
+*.img
+*.img.gz
+
+# Device/config backups
+backups/
+*.tar.gz
+mtd0
+mtd1
+mtd2
+mtd3
+
+# Generated banner
+files/etc/banner
+
+# Sensitive identity/credential files
+files/etc/shadow
+files/etc/dropbear/*_host_key
+
+# Generated documentation
+*.pdf
+docs/generated/
+
+# Editor/OS/temp files
+*.tmp
+*.bak
+*~
+.DS_Store
+Thumbs.db

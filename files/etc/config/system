@@ -1,0 +1,25 @@
+
+config system
+	option hostname 'machine-router'
+	option timezone 'EST5EDT,M3.2.0,M11.1.0'
+	option ttylogin '0'
+	option log_size '64'
+	option urandom_seed '0'
+	option zonename 'America/New York'
+	option log_proto 'udp'
+	option conloglevel '8'
+	option cronloglevel '5'
+	option compat_version '2.0'
+
+config timeserver 'ntp'
+	list server '129.6.15.28'
+	list server '132.163.96.1'
+	option enable_server '1'
+
+config led 'led_wan'
+	option name 'WAN'
+	option sysfs 'inet:blue'
+	option trigger 'netdev'
+	option mode 'link tx rx'
+	option dev 'wan'
+

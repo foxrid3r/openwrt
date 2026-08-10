@@ -1,0 +1,249 @@
+#!/bin/sh
+# set-dhcp-range
+# Version: 5 - preserve router hostname in fragmented mode
+# Sets OpenWrt DHCP pool as either:
+#   1) normal UCI consecutive pool, or
+#   2) fragmented dnsmasq dhcp-range entries
+
+set -eu
+
+CUSTOM_DIR="/etc/dnsmasq.d"
+CUSTOM_FILE="$CUSTOM_DIR/custom-ranges.conf"
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+is_ipv4() {
+  echo "$1" | awk -F. '
+    NF != 4 { valid = 0; exit }
+    BEGIN { valid = 1 }
+    {
+      for (i = 1; i <= 4; i++) {
+        if ($i !~ /^[0-9]+$/ || $i < 0 || $i > 255) {
+          valid = 0
+          exit
+        }
+      }
+    }
+    END { exit valid ? 0 : 1 }
+  '
+}
+
+ip_to_int() {
+  echo "$1" | awk -F. '{print ($1*256*256*256)+($2*256*256)+($3*256)+$4}'
+}
+
+int_to_ip() {
+  awk -v n="$1" 'BEGIN{
+    o1=int(n/(256*256*256)); n-=o1*256*256*256;
+    o2=int(n/(256*256));     n-=o2*256*256;
+    o3=int(n/256);           n-=o3*256;
+    o4=n;
+    print o1"."o2"."o3"."o4;
+  }'
+}
+
+clean_line() {
+  printf "%s" "$1" | sed 's/\r//g; s/^[[:space:]]\+//; s/[[:space:]]\+$//'
+}
+
+show_current_range() {
+  echo ""
+  echo "Current DHCP configuration:"
+
+  ignore="$(uci -q get dhcp.lan.ignore || echo 0)"
+  dhcpv4="$(uci -q get dhcp.lan.dhcpv4 || echo server)"
+
+  if [ "$ignore" = "1" ] || [ "$dhcpv4" = "disabled" ]; then
+    echo "  Standard UCI DHCP pool: disabled"
+
+    if [ -f "$CUSTOM_FILE" ]; then
+      echo "  Custom fragmented ranges:"
+      grep '^dhcp-range=' "$CUSTOM_FILE" || echo "  No dhcp-range entries found."
+    else
+      echo "  No custom range file found at $CUSTOM_FILE"
+    fi
+  else
+    lan_ip="$(uci -q get network.lan.ipaddr || true)"
+    netmask="$(uci -q get network.lan.netmask || true)"
+    start="$(uci -q get dhcp.lan.start || true)"
+    limit="$(uci -q get dhcp.lan.limit || true)"
+    leasetime="$(uci -q get dhcp.lan.leasetime || echo 12h)"
+
+    if [ -n "$lan_ip" ] && [ -n "$netmask" ] && [ -n "$start" ] && [ -n "$limit" ]; then
+      lan_i="$(ip_to_int "$lan_ip")"
+      mask_i="$(ip_to_int "$netmask")"
+      net_i="$(awk -v a="$lan_i" -v b="$mask_i" 'BEGIN{printf "%.0f", and(a,b)}')"
+      start_i="$(awk -v n="$net_i" -v s="$start" 'BEGIN{printf "%.0f", n+s}')"
+      end_i="$(awk -v s="$start_i" -v l="$limit" 'BEGIN{printf "%.0f", s+l-1}')"
+
+      echo "  Standard UCI DHCP pool: enabled"
+      echo "  Range: $(int_to_ip "$start_i") - $(int_to_ip "$end_i")"
+      echo "  Lease time: $leasetime"
+    else
+      echo "  Standard UCI DHCP pool appears incomplete."
+    fi
+  fi
+
+  echo ""
+}
+
+read_ranges() {
+  output_file="$1"
+  count=0
+
+  : > "$output_file"
+
+  echo "Enter DHCP ranges." >&2
+  echo "Examples:" >&2
+  echo "  Consecutive:   192.168.1.191-192.168.1.200" >&2
+  echo "  Fragmented:    enter multiple ranges, one at a time" >&2
+  echo "" >&2
+  echo "Press Enter on a blank line when finished." >&2
+  echo "" >&2
+
+  while :; do
+    printf "Range %s: " "$((count + 1))" >&2
+
+    if ! IFS= read -r line; then
+      break
+    fi
+
+    line="$(clean_line "$line")"
+    [ -z "$line" ] && break
+
+    case "$line" in
+      *-*)
+        start_ip="${line%%-*}"
+        end_ip="${line#*-}"
+        ;;
+      *)
+        echo "Invalid format. Use start-end, for example 192.168.1.191-192.168.1.200" >&2
+        continue
+        ;;
+    esac
+
+    start_ip="$(clean_line "$start_ip")"
+    end_ip="$(clean_line "$end_ip")"
+
+    is_ipv4 "$start_ip" || { echo "Invalid start IP." >&2; continue; }
+    is_ipv4 "$end_ip" || { echo "Invalid end IP." >&2; continue; }
+
+    start_i="$(ip_to_int "$start_ip")"
+    end_i="$(ip_to_int "$end_ip")"
+
+    awk -v a="$start_i" -v b="$end_i" 'BEGIN{exit (a<=b)?0:1}' || {
+      echo "Start IP must be less than or equal to end IP." >&2
+      continue
+    }
+
+    printf '%s,%s\n' "$start_ip" "$end_ip" >> "$output_file"
+    count=$((count + 1))
+  done
+
+  [ "$count" -gt 0 ] || die "no ranges entered"
+}
+
+apply_consecutive_range() {
+  start_ip="$1"
+  end_ip="$2"
+
+  lan_ip="$(uci -q get network.lan.ipaddr)" || die "could not read LAN IP"
+  netmask="$(uci -q get network.lan.netmask)" || die "could not read LAN netmask"
+
+  lan_i="$(ip_to_int "$lan_ip")"
+  mask_i="$(ip_to_int "$netmask")"
+  net_i="$(awk -v a="$lan_i" -v b="$mask_i" 'BEGIN{printf "%.0f", and(a,b)}')"
+
+  start_i="$(ip_to_int "$start_ip")"
+  end_i="$(ip_to_int "$end_ip")"
+
+  start_offset="$(awk -v s="$start_i" -v n="$net_i" 'BEGIN{printf "%.0f", s-n}')"
+  limit="$(awk -v s="$start_i" -v e="$end_i" 'BEGIN{printf "%.0f", e-s+1}')"
+
+  echo "Applying standard UCI DHCP pool:"
+  echo "  $start_ip - $end_ip"
+  echo "  dhcp.lan.start=$start_offset"
+  echo "  dhcp.lan.limit=$limit"
+
+  uci -q delete dhcp.lan.ignore || true
+  uci set dhcp.lan.dhcpv4='server'
+  uci set dhcp.lan.start="$start_offset"
+  uci set dhcp.lan.limit="$limit"
+  uci set dhcp.lan.leasetime='12h'
+
+  rm -f "$CUSTOM_FILE"
+
+  uci commit dhcp
+  /etc/init.d/dnsmasq restart
+}
+
+apply_fragmented_ranges() {
+  ranges_file="$1"
+
+  echo "Applying fragmented DHCP ranges:"
+  while IFS= read -r r; do
+    [ -n "$r" ] && echo "  $r"
+  done < "$ranges_file"
+
+  mkdir -p "$CUSTOM_DIR"
+
+  uci -q delete dhcp.lan.ignore || true
+  uci set dhcp.lan.dhcpv4='disabled'
+
+  uci -q del_list dhcp.@dnsmasq[0].confdir="$CUSTOM_DIR" || true
+  uci add_list dhcp.@dnsmasq[0].confdir="$CUSTOM_DIR"
+
+  {
+    echo "# Custom fragmented DHCP ranges"
+    echo "# Generated by set-dhcp-range"
+    echo ""
+    while IFS= read -r r; do
+      [ -n "$r" ] && echo "dhcp-range=$r,12h"
+    done < "$ranges_file"
+  } > "$CUSTOM_FILE"
+
+  uci commit dhcp
+  /etc/init.d/dnsmasq restart
+}
+
+show_current_range
+
+RANGES_FILE="/tmp/set-dhcp-range.$$"
+cleanup() {
+  rm -f "$RANGES_FILE"
+}
+trap cleanup EXIT INT TERM
+
+read_ranges "$RANGES_FILE"
+range_count="$(wc -l < "$RANGES_FILE" | tr -d ' ')"
+
+echo ""
+echo "About to apply:"
+while IFS= read -r r; do
+  [ -n "$r" ] && echo "  $r"
+done < "$RANGES_FILE"
+
+printf "Proceed? [y/N]: "
+IFS= read -r confirm
+
+case "$confirm" in
+  y|Y|yes|YES)
+    ;;
+  *)
+    echo "Aborted."
+    exit 0
+    ;;
+esac
+
+if [ "$range_count" -eq 1 ]; then
+  IFS= read -r one_range < "$RANGES_FILE"
+  start_ip="${one_range%%,*}"
+  end_ip="${one_range#*,}"
+  apply_consecutive_range "$start_ip" "$end_ip"
+else
+  apply_fragmented_ranges "$RANGES_FILE"
+fi
+
+echo ""
+echo "Done."
+show_current_range

@@ -1,0 +1,47 @@
+#!/bin/sh
+# /usr/bin/usb-eject
+# Eject flash drive
+
+MP="/mnt/usb"
+
+is_mounted() {
+  # Returns 0 if MP is mounted, 1 otherwise
+  grep -qs " $MP " /proc/mounts
+}
+
+mounted_dev() {
+  # Prints the device mounted at MP (blank if not mounted)
+  awk -v mp="$MP" '$2==mp {print $1; exit}' /proc/mounts
+}
+
+if is_mounted; then
+  DEV="$(mounted_dev)"
+  echo "Flushing writes to ${DEV:-device}..."
+  sync
+  sleep 2
+
+  echo "Unmounting $MP..."
+  if umount "$MP" 2>/dev/null; then
+    sync
+    echo "Safe to remove USB drive."
+    exit 0
+  fi
+
+  # Fallback for OpenWrt block helper (if present)
+  if [ -x /sbin/block ]; then
+    /sbin/block umount "$DEV" 2>/dev/null || /sbin/block umount 2>/dev/null || true
+  fi
+
+  if ! is_mounted; then
+    sync
+    echo "Safe to remove USB drive."
+    exit 0
+  fi
+
+  echo "ERROR: Failed to unmount $MP. A process may still be using it."
+  echo "Try: lsof +D $MP  (if lsof installed) or: fuser -m $MP (if fuser installed)"
+  exit 1
+else
+  echo "Not mounted at $MP."
+  exit 0
+fi

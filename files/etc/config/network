@@ -1,0 +1,46 @@
+
+config interface 'loopback'
+	option device 'lo'
+	option proto 'static'
+	option ipaddr '127.0.0.1'
+	option netmask '255.0.0.0'
+
+config globals 'globals'
+	option ula_prefix 'fd14:f369:7e4a::/48'
+	option packet_steering '1'
+
+config device
+	option name 'br-lan'
+	option type 'bridge'
+	list ports 'lan1'
+	list ports 'lan2'
+	list ports 'lan3'
+	list ports 'lan4'
+
+config interface 'lan'
+	option device 'br-lan'
+	option proto 'static'
+	option ipaddr '192.168.1.123'
+	option netmask '255.255.255.0'
+	option ip6assign '60'
+
+config interface 'wan6'
+	option device 'wan'
+	option proto 'dhcp'
+
+config interface 'wwan'
+	option proto 'dhcp'
+
+config interface 'wwan_guest'
+	option proto 'dhcp'
+	option peerdns '0'
+	option metric '50'
+
+config route
+	option interface 'wwan_guest'
+	option target '129.6.15.28/32'
+
+config route
+	option interface 'wwan_guest'
+	option target '132.163.96.1/32'
+
