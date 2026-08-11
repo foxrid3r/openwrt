@@ -1,21 +1,20 @@
+
 # Router Provisioning
 
-The custom OpenWrt image includes the `provision-router` utility for configuring a router after the image has been installed.
+The custom OpenWrt image includes the `provision-router` utility for configuring settings that commonly need to be unique for each deployed router.
 
-The utility provides an interactive interface for configuring the settings that normally need to be unique for each router, including:
+The utility can configure:
 
-* Hostname
-* Root password
-* LAN IP address and subnet mask
-* DHCP address range
-* Machine-network Wi-Fi SSID and password
-* Internet/NTP uplink Wi-Fi SSID and password
+- Hostname
+- Root password
+- LAN IP address and subnet mask
+- Standard consecutive DHCP pool
+- Machine-network Wi-Fi SSID and password
+- NTP-uplink Wi-Fi SSID and password
 
-Settings can be changed individually. Pressing **Enter** at a prompt leaves the existing value unchanged.
+Pressing **Enter** at any prompt leaves that setting unchanged.
 
----
-
-# Running the Provisioning Utility
+## Running the Provisioning Utility
 
 Connect to the router through SSH and run:
 
@@ -23,293 +22,246 @@ Connect to the router through SSH and run:
 provision-router
 ```
 
-The script displays the current configuration and prompts for any values that should be changed.
-
-The utility is located at:
+The utility is installed at:
 
 ```text
 /usr/sbin/provision-router
 ```
 
----
+It displays the current configuration, prompts for changes, shows a summary, and asks for confirmation before applying anything.
 
-# Default Configuration
+## Factory Image Defaults
 
-A newly installed custom image contains a predefined configuration so the router is usable before provisioning.
+A newly flashed image uses the following defaults:
 
-| Setting                | Default         |
-| ---------------------- | --------------- |
-| Hostname               | `Spare1`        |
-| LAN IP                 | `192.168.1.123` |
-| Machine Wi-Fi SSID     | `Spare1`        |
-| Root Password          | `Admin12345!`   |
-| Machine Wi-Fi Password | `Admin12345!`   |
-| DHCP Start             | `192.168.1.124` |
-| DHCP End               | `192.168.1.128` |
-| Wired DHCP Mode        | `COGNEX_ON`     |
+| Setting | Factory Default |
+|---|---|
+| Hostname | `Spare1` |
+| LAN IP | `192.168.1.123` |
+| LAN netmask | `255.255.255.0` |
+| DHCP start | `192.168.1.124` |
+| DHCP end | `192.168.1.128` |
+| Machine Wi-Fi SSID | `Spare1` |
+| Machine Wi-Fi password | `Admin12345!` |
+| Root username | `root` |
+| Root password | `Admin12345!` |
+| FTP username | `admin` |
+| FTP password | `admin` |
+| Wired DHCP mode | `COGNEX_ON` |
+| NTP uplink SSID | `CHANGE_ME_INTERNET_NETWORK` |
+| NTP uplink password | `CHANGE_ME_PASSWORD` |
 
 > [!IMPORTANT]
-> The default credentials are included in the custom image and are therefore not unique to an individual router. Change the passwords during provisioning when the router requires unique credentials.
+> The factory passwords are shared bootstrap credentials and are visible in the public repository. Change them when unique deployment credentials are required.
 
----
+`provision-router` changes the root password and Wi-Fi credentials, but it does **not** change the FTP `admin` password. Change the FTP password separately with:
 
-# Provisioning Process
-
-The utility walks through each configurable setting.
-
-For most prompts, the current value is displayed.
-
-For example:
-
-```text
-Current hostname: Spare1
-New hostname (Enter to keep current):
+```sh
+passwd admin
 ```
 
-Pressing **Enter** without entering a new value preserves the existing setting.
+## Provisioning Process
 
-This allows the provisioning utility to be used to change only one or two settings without reconfiguring the entire router.
+The utility walks through each setting and displays the current value when appropriate.
 
----
-
-# Hostname
-
-The hostname identifies the router on the network.
-
-The default hostname is:
+Example:
 
 ```text
-Spare1
+Hostname [Spare1] (blank = unchanged):
 ```
 
-A new hostname can be entered during provisioning.
+Press **Enter** to keep `Spare1`, or enter a new value.
 
-For example:
+Before applying changes, the utility prints a summary showing which values will change and asks:
+
+```text
+Proceed? [y/N]:
+```
+
+No changes are made unless the operation is confirmed.
+
+## Hostname
+
+The hostname identifies the router on the local network.
+
+The machine-router hostname accepts:
+
+```text
+A-Z
+a-z
+0-9
+_
+-
+```
+
+Periods are not permitted.
+
+Example:
 
 ```text
 Spare2
 ```
 
-The hostname accepts:
+The hostname and machine Wi-Fi SSID are independent settings and may be different.
+
+## Root Password
+
+The OpenWrt `root` password is used for administrative access through SSH and LuCI.
+
+Enter a new password when prompted, or press **Enter** to retain the current password.
+
+Changing the root password does not change the machine Wi-Fi or FTP passwords.
+
+## LAN Network Configuration
+
+The default LAN configuration is:
 
 ```text
-A-Z
-a-z
-0-9
-_
--
+IP address: 192.168.1.123
+Netmask:    255.255.255.0
 ```
 
-Periods (`.`) are not permitted.
-
-The hostname is also commonly used as the machine-network Wi-Fi SSID, although the two values can be configured independently.
-
----
-
-# Root Password
-
-The provisioning utility can change the OpenWrt `root` password.
-
-This password is used for administrative access, including SSH and the LuCI web interface.
-
-Press **Enter** without entering a new password to retain the existing root password.
-
-> [!IMPORTANT]
-> Changing the root password does not automatically change the machine-network Wi-Fi password. These are separate settings.
-
----
-
-# LAN Network Configuration
-
-The provisioning utility can configure the router's LAN IP address and subnet mask.
-
-The default LAN IP is:
-
-```text
-192.168.1.123
-```
-
-The LAN address is the address used to access the router from the machine network.
+The LAN address is used to access both SSH and LuCI.
 
 For example:
-
-```text
-http://192.168.1.123/
-```
-
-can be used to access LuCI when connected to the LAN network.
-
-The same address can be used for SSH:
 
 ```sh
 ssh root@192.168.1.123
 ```
 
----
-
-## Changing the LAN Address
-
-A router can be assigned a different address during provisioning.
-
-For example:
+and:
 
 ```text
-192.168.1.124
+http://192.168.1.123/
 ```
 
-The provisioning utility also prompts for the LAN subnet mask.
+The utility validates IPv4 addresses and only accepts contiguous IPv4 netmasks.
 
-The LAN IP address and subnet mask determine which addresses belong to the local machine network.
+## DHCP Configuration
 
----
+`provision-router` manages a standard consecutive OpenWrt/UCI DHCP pool.
 
-# DHCP Configuration
-
-The provisioning utility can configure a standard consecutive DHCP address pool.
-
-The default pool is:
+The factory pool is:
 
 ```text
 192.168.1.124 - 192.168.1.128
 ```
 
-The utility prompts for the complete starting and ending IPv4 addresses rather than the OpenWrt `start` and `limit` values.
-
-For example:
+The utility prompts for complete start and end addresses:
 
 ```text
-DHCP Start: 192.168.1.124
-DHCP End:   192.168.1.128
+DHCP pool start address [192.168.1.124] (blank = unchanged):
+DHCP pool end address [192.168.1.128] (blank = unchanged):
 ```
 
-The provisioning utility automatically converts these addresses into the configuration format required by OpenWrt.
+Internally, OpenWrt stores the pool using a subnet-relative `start` value and a `limit`.
 
----
+For the factory `/24` network:
 
-## DHCP Range Validation
-
-When changing the DHCP range, both a starting and ending address must be supplied.
+```text
+Start address: 192.168.1.124
+UCI start:     124
+Limit:         5
+```
 
 The utility verifies that:
 
-* Both addresses are valid IPv4 addresses.
-* The starting address is not greater than the ending address.
-* Both addresses belong to the configured LAN subnet.
+- Both addresses are valid IPv4 addresses.
+- Both addresses are within the configured LAN subnet.
+- The start address is less than or equal to the end address.
+- The router's own LAN IP is not inside the DHCP pool.
+- Both DHCP fields are entered together or both are left blank.
 
-If both DHCP prompts are left blank, the existing DHCP configuration is preserved.
+## Fragmented DHCP Ranges
 
----
+Fragmented DHCP ranges are managed by the separate `set-dhcp-range` utility.
 
-# Fragmented DHCP Ranges
-
-`provision-router` manages a **standard consecutive DHCP pool**.
-
-If the router uses fragmented DHCP ranges configured by `set-dhcp-range`, the provisioning utility detects this configuration and warns that provisioning a new DHCP range will replace it.
-
-For example, a fragmented configuration might provide:
+In fragmented mode, the active ranges are stored in:
 
 ```text
-192.168.1.50 - 192.168.1.60
-
-and
-
-192.168.1.178 - 192.168.1.179
+/etc/dnsmasq.d/custom-ranges.conf
 ```
 
-If a new DHCP range is entered through `provision-router`, the fragmented configuration is removed and replaced with the newly specified consecutive range.
+and the normal UCI DHCPv4 server is disabled.
 
-If the existing fragmented DHCP configuration should remain unchanged, leave the DHCP start and end prompts blank.
+If fragmented mode is active, `provision-router` should report that condition before prompting for DHCP addresses.
 
-For more information, see [DHCP Range Configuration](../networking/set-dhcp-range.md).
+To preserve the fragmented pool, leave both DHCP prompts blank.
 
----
+Entering a new DHCP start and end range intentionally switches the router back to the standard consecutive UCI DHCP mode by:
 
-# Machine-Network Wi-Fi
+1. Removing any old `dhcp.lan.ignore` flag.
+2. Setting `dhcp.lan.dhcpv4='server'`.
+3. Writing the new UCI `start` and `limit`.
+4. Removing `/etc/dnsmasq.d/custom-ranges.conf`.
+5. Restarting `dnsmasq`.
 
-The router provides a Wi-Fi access point for connecting to the isolated machine network.
+For fragmented or specialized pool configuration, see [DHCP Range Configuration](../networking/set-dhcp-range.md).
 
-This access point uses `radio1`.
+## Machine-Network Wi-Fi
 
-The provisioning utility allows the following settings to be changed:
+The machine-network access point runs on `radio1`.
 
-* SSID
-* Wi-Fi password
+`provision-router` automatically locates the `radio1` AP interface and can change its:
 
-The default SSID is:
+- SSID
+- WPA2-PSK passphrase
+
+The factory SSID is:
 
 ```text
 Spare1
 ```
 
-The SSID accepts:
+The factory password is:
 
 ```text
-A-Z
-a-z
-0-9
-_
--
+Admin12345!
 ```
 
-Periods (`.`) are not permitted.
+The machine SSID uses the same character restrictions as the hostname: letters, numbers, underscores, and hyphens; periods are not permitted.
 
----
+Changing the machine-network Wi-Fi settings causes Wi-Fi to reload and may disconnect wireless clients.
 
-## Machine Wi-Fi Password
+## NTP Uplink Wi-Fi
 
-The machine-network Wi-Fi password can be changed during provisioning.
+The separate NTP uplink uses a station interface on `radio0` attached to:
 
-If the password is changed, the access point is configured to use WPA2-PSK encryption.
+```text
+ntp_uplink
+```
 
-Press **Enter** without entering a new password to retain the existing Wi-Fi password.
+The factory image contains placeholder credentials:
 
-> [!NOTE]
-> Changing the machine-network Wi-Fi settings may temporarily disconnect wireless clients while the wireless interface reloads.
+```text
+SSID:     CHANGE_ME_INTERNET_NETWORK
+Password: CHANGE_ME_PASSWORD
+```
 
----
+The uplink SSID is accepted as entered because it must match an external network and may contain spaces, periods, or other printable characters.
 
-# Internet/NTP Uplink Wi-Fi
+When changing only the uplink password, the utility preserves the interface's existing encryption mode.
 
-The router also contains a separate Wi-Fi client connection used to provide limited upstream connectivity.
+The NTP uplink is intentionally isolated from the machine LAN. See [NTP](../services/ntp.md).
 
-This connection uses `radio0`.
+## Applying Changes
 
-Its primary purpose is to allow services such as NTP to reach an external network without providing general Internet access to devices on the machine LAN.
+Depending on what was changed, the utility may:
 
-The provisioning utility allows the uplink:
+- Commit `system` configuration changes.
+- Commit `network` configuration changes.
+- Commit `dhcp` configuration changes.
+- Commit `wireless` configuration changes.
+- Reload Wi-Fi.
+- Restart `dnsmasq`.
+- Restart the network service.
+- Change the root password.
 
-* SSID
-* Wi-Fi password
+If the LAN IP or netmask changes, the SSH connection may be interrupted.
 
-to be changed.
+## After Changing the LAN IP
 
-Unlike the machine-network SSID, the uplink SSID is accepted as entered so it can match the name of an existing external wireless network.
-
-Changing the uplink credentials preserves the existing wireless encryption configuration.
-
----
-
-# Applying Changes
-
-The provisioning utility determines which portions of the router configuration were changed and applies the necessary updates.
-
-Depending on the settings changed, this can include:
-
-* Committing UCI configuration changes
-* Reloading the network configuration
-* Reloading Wi-Fi
-* Restarting or reloading DHCP/DNS services
-* Updating the root password
-
-Only the services affected by the configuration changes are reloaded.
-
----
-
-# After Changing the LAN IP
-
-Changing the LAN IP address changes the address used to communicate with the router.
-
-For example, if the router changes from:
+If the router is changed from:
 
 ```text
 192.168.1.123
@@ -321,57 +273,31 @@ to:
 192.168.1.124
 ```
 
-the existing SSH or LuCI connection may be interrupted.
-
-Reconnect using the new address:
+reconnect using the new address:
 
 ```sh
 ssh root@192.168.1.124
 ```
 
-or open:
+A DHCP-connected computer may also need to renew its address.
 
-```text
-http://192.168.1.124/
-```
+## Re-running Provisioning
 
-in a web browser.
+`provision-router` can be run again at any time.
 
-The computer connected to the router may also need to renew its network configuration if it obtains its address through DHCP.
+This is useful when:
 
----
+- Reassigning a router to another machine.
+- Changing the hostname.
+- Changing the LAN subnet.
+- Changing a normal consecutive DHCP pool.
+- Changing machine Wi-Fi credentials.
+- Changing NTP uplink credentials.
+- Changing the root password.
 
-# Re-running Provisioning
+## Related Tools
 
-`provision-router` is not limited to the initial installation.
-
-It can be run again at any time:
-
-```sh
-provision-router
-```
-
-Existing values are displayed and can be retained by pressing **Enter**.
-
-This makes the utility useful when:
-
-* Assigning a router to a different machine
-* Changing the router hostname
-* Changing the LAN network
-* Changing the DHCP pool
-* Changing Wi-Fi credentials
-* Changing the Internet/NTP uplink network
-* Changing administrative credentials
-
----
-
-# Related Tools
-
-Provisioning establishes the router's primary configuration. Additional tools are available for more specialized network configuration.
-
-## DHCP Range Configuration
-
-For consecutive or fragmented DHCP range configuration:
+For consecutive or fragmented DHCP ranges:
 
 ```sh
 set-dhcp-range
@@ -379,9 +305,7 @@ set-dhcp-range
 
 See [DHCP Range Configuration](../networking/set-dhcp-range.md).
 
-## Wired DHCP Mode
-
-To control DHCP availability on the wired Ethernet ports:
+To control DHCP availability on wired ports:
 
 ```sh
 dhcp-mode ON
@@ -391,36 +315,19 @@ dhcp-mode COGNEX_ON
 
 See [DHCP Modes](../networking/dhcp-modes.md).
 
-## Tool Reference
+For a complete command summary, see the [Tool Reference](../tool-reference/tool-reference.md).
 
-For a summary of the command-line utilities included with the custom image, see [Tool Reference](../tool-reference/tool-reference.md).
-
----
-
-# Provisioning Summary
+## Provisioning Summary
 
 For a newly installed router:
 
-1. Flash and boot the custom OpenWrt image.
-
+1. Flash and boot the custom image.
 2. Connect to the router.
-
-3. Log in through SSH.
-
-4. Run:
-
-   ```sh
-   provision-router
-   ```
-
-5. Change the settings required for that router.
-
-6. Press **Enter** for settings that should remain unchanged.
-
-7. Allow the utility to apply the configuration.
-
-8. If the LAN IP was changed, reconnect using the new address.
-
-9. Verify LAN, DHCP, Wi-Fi, and uplink operation.
-
-The router can be provisioned again at any time without requiring the custom image to be rebuilt or reflashed.
+3. SSH to the factory LAN IP.
+4. Run `provision-router`.
+5. Change the required settings.
+6. Leave unwanted changes blank.
+7. Review the summary and confirm.
+8. Reconnect if the LAN address changed.
+9. Change the FTP password separately if required.
+10. Verify LAN, DHCP, Wi-Fi, and NTP-uplink operation.

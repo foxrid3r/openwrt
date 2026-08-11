@@ -1,236 +1,248 @@
-# OpenWrt FTP Server Setup (vsftpd)
 
-This document records the complete, working procedure used to configure an FTP server
-on OpenWrt using `vsftpd`.
+# FTP Server
 
-The final configuration provides:
-- FTP access for a single user (`admin`)
-- Only `admin` is jailed (chrooted)
-- `admin` has no SSH or shell access
-- FTP root directory is `/mnt/usb/FTP`
-- Authentication uses system users
-- Compatible with USB-backed storage
+The custom image includes `vsftpd` for file access to the router's removable USB storage.
 
----
+## Overview
 
-## Prerequisites
+The factory configuration provides:
 
-- Logged in as `root` via SSH
-- USB storage already mounted at `/mnt/usb`
-- FTP directory exists at `/mnt/usb/FTP`
+- A single permitted FTP user: `admin`
+- No anonymous FTP access
+- No interactive shell access for `admin`
+- A jailed FTP root at `/mnt/usb/FTP`
+- Read/write FTP access
+- FTP protocol and transfer logging
 
----
+The FTP server depends on the USB-storage system documented in [USB Storage](usb-storage.md).
 
-## Install vsftpd
+## Factory FTP Account
 
-```sh
-opkg update
-opkg install vsftpd
-/etc/init.d/vsftpd enable
-```
-
----
-
-## Create / Configure FTP User
-
-Edit `/etc/passwd` so the user is non-interactive and not tied to removable media:
+The first-boot script:
 
 ```text
-admin:<hashed_password>:1000:55::/tmp:/bin/false
+/etc/uci-defaults/20-create-ftp-admin
 ```
 
-User details:
-- Username: `admin`
-- UID: `1000`
-- GID: `55` (group `ftp`)
-- Shell: `/bin/false` (FTP-only account)
+creates the FTP account if required.
 
-Set or reset the password:
+Factory credentials are:
+
+```text
+Username: admin
+Password: admin
+```
+
+The account is created with:
+
+```text
+Home:  /mnt/usb/FTP
+Shell: /bin/false
+```
+
+> [!IMPORTANT]
+> The factory FTP password is a public shared bootstrap credential. Change it when unique credentials are required.
+
+Change the FTP password with:
 
 ```sh
 passwd admin
 ```
 
----
+`provision-router` does not currently change the FTP password.
 
-## Allow /bin/false for FTP Authentication
+## FTP Storage Location
 
-vsftpd validates the login shell against `/etc/shells`.
-If `/bin/false` is missing, FTP login fails with `530 Login incorrect`.
+The FTP root is:
 
-Fix:
-
-```sh
-echo /bin/false >> /etc/shells
+```text
+/mnt/usb/FTP
 ```
 
----
+The USB hotplug handler mounts the removable exFAT filesystem at `/mnt/usb`.
 
-## Configure vsftpd
+The FTP directory is created by the first-boot account script if it does not already exist.
 
-Edit `/etc/vsftpd.conf`:
+## vsftpd Configuration
+
+The server configuration is stored at:
+
+```text
+/etc/vsftpd.conf
+```
+
+Important settings include:
 
 ```ini
-# -----------------------------------------------------------------------------
-# Basic server mode
-# -----------------------------------------------------------------------------
-
 listen=YES
-# Run vsftpd in standalone mode, listening on IPv4 sockets.
-# (Required when not using inetd/systemd socket activation.)
-
 listen_ipv6=NO
-# Disable IPv6 listening. Only IPv4 connections will be accepted.
-
 background=YES
-# Run vsftpd as a background daemon instead of blocking the terminal.
-
-
-# -----------------------------------------------------------------------------
-# Authentication & user access
-# -----------------------------------------------------------------------------
 
 anonymous_enable=NO
-# Disable anonymous FTP access.
-# All users must authenticate with a valid local system account.
-
 local_enable=YES
-# Allow local system users (from /etc/passwd) to log in via FTP.
-
 write_enable=YES
-# Enable write operations (upload, delete, rename files/directories).
-# Required for any user who needs to modify files.
-
-
-# -----------------------------------------------------------------------------
-# Chroot (filesystem isolation)
-# -----------------------------------------------------------------------------
 
 chroot_local_user=NO
-# Do NOT chroot all local users by default.
-# Chroot behavior will instead be controlled using a chroot list.
-
 chroot_list_enable=YES
-# Enable selective chrooting using a list file.
-
 chroot_list_file=/etc/vsftpd.chroot
-# File containing usernames that SHOULD be chrooted
-# (i.e., restricted to their home directory).
-# One username per line.
-
 allow_writeable_chroot=YES
-# Allow users to be chrooted into directories that are writable.
-# This is often required for embedded systems (like OpenWRT),
-# but should be enabled only when you trust the users.
-
-
-# -----------------------------------------------------------------------------
-# Per-user configuration
-# -----------------------------------------------------------------------------
 
 user_config_dir=/etc/vsftpd.users
-# Directory containing optional per-user configuration files.
-# If a file named after the username exists here, its settings
-# will override global settings for that user.
-
-
-# -----------------------------------------------------------------------------
-# User allow/deny list
-# -----------------------------------------------------------------------------
 
 userlist_enable=YES
-# Enable user access control using a user list file.
-
 userlist_file=/etc/vsftpd.userlist
-# File containing usernames that are allowed or denied FTP access,
-# depending on the userlist_deny setting.
-
 userlist_deny=NO
-# Treat the userlist as an ALLOW list.
-# Only users listed in /etc/vsftpd.userlist are permitted to log in.
-
-
-# -----------------------------------------------------------------------------
-# Logging
-# -----------------------------------------------------------------------------
 
 xferlog_enable=YES
-# Enable logging of file transfers (uploads/downloads).
-
 log_ftp_protocol=YES
-# Enable verbose logging of all FTP protocol commands and responses.
-# Useful for debugging authentication, permissions, and client behavior.
 ```
 
----
+## Access Control
 
-## Jail Only the admin User
+Only users listed in:
 
-Create `/etc/vsftpd.chroot`:
+```text
+/etc/vsftpd.userlist
+```
+
+are permitted to authenticate.
+
+The image permits:
 
 ```text
 admin
 ```
 
-Create `/etc/vsftpd.userlist`:
+The `admin` user is also listed in:
 
 ```text
-admin
+/etc/vsftpd.chroot
 ```
 
----
+so the FTP session is restricted to the configured FTP root.
 
-## Set FTP Jail Directory for admin
+## Per-User Root
 
-Create per-user config directory and file:
+The per-user configuration file is:
+
+```text
+/etc/vsftpd.users/admin
+```
+
+and points the account at:
+
+```text
+/mnt/usb/FTP
+```
+
+## `/bin/false`
+
+The FTP account is intentionally non-interactive:
+
+```text
+/bin/false
+```
+
+This prevents the `admin` account from being used as a normal shell login.
+
+vsftpd must be able to accept that shell according to the image's authentication configuration.
+
+## USB Permission Model
+
+The exFAT USB filesystem is mounted with:
+
+```text
+uid=1000,gid=55,umask=0007
+```
+
+This is intended to give the FTP account and FTP group read/write access to the removable storage.
+
+See [USB Storage](usb-storage.md) for details.
+
+## Service Management
+
+Check status:
 
 ```sh
-mkdir -p /etc/vsftpd.users
+/etc/init.d/vsftpd status
 ```
 
-Create `/etc/vsftpd.users/admin`:
-
-```ini
-local_root=/mnt/usb/FTP
-```
-
-## 🏗 Why It’s Designed This Way
-
-`vsftpd` separates configuration into distinct files to enforce security through separation of concerns. Each file controls a different layer of behavior.
-
-This design prevents accidental misconfiguration and supports scalable, secure multi-user setups.
-
-| File | Controls |
-|------|----------|
-| `vsftpd.conf` | Global server defaults and core behavior |
-| `/etc/vsftpd.userlist` | Which users are allowed (or denied) login access |
-| `/etc/vsftpd.chroot` | Which users are jailed (restricted to their home directory) |
-| `/etc/vsftpd.users/<username>` | Per-user configuration overrides |
-
-### Why This Separation Matters
-
-- 🔐 **Authentication control** is separate from filesystem access.
-- 🚪 **Login permission** is separate from directory isolation.
-- 🧩 **Per-user behavior** can override global defaults safely.
-- 🛡️ Prevents privilege escalation or unintended directory access.
-- 📈 Makes it easy to scale from a single-user setup to multiple users.
-
-This layered approach is intentional and aligns with `vsftpd`’s security-focused design philosophy.
-
----
-
-## Restart FTP Server
+Restart:
 
 ```sh
 /etc/init.d/vsftpd restart
 ```
 
----
+Enable at boot:
+
+```sh
+/etc/init.d/vsftpd enable
+```
 
 ## Verification
 
-- FTP login as `admin` succeeds
-- `admin` is jailed to `/mnt/usb/FTP`
-- `cd ..` is denied
-- File uploads succeed
-- SSH login as `admin` fails
+Confirm the USB filesystem is mounted:
+
+```sh
+mount | grep /mnt/usb
+```
+
+Confirm the FTP directory exists:
+
+```sh
+ls -ld /mnt/usb/FTP
+```
+
+Check the FTP account:
+
+```sh
+id admin
+```
+
+Inspect logs while connecting:
+
+```sh
+logread -f
+```
+
+## Troubleshooting
+
+### FTP Login Fails
+
+Verify:
+
+- The `admin` account exists.
+- Its password is correct.
+- `admin` is present in `/etc/vsftpd.userlist`.
+- `/bin/false` is accepted by the authentication setup.
+- vsftpd is running.
+
+### Upload/Delete Fails
+
+Verify the USB filesystem is mounted read/write and has the expected UID/GID:
+
+```sh
+mount | grep /mnt/usb
+```
+
+### FTP Root Is Empty or Missing
+
+Verify the USB drive is mounted at:
+
+```text
+/mnt/usb
+```
+
+and that:
+
+```text
+/mnt/usb/FTP
+```
+
+exists.
+
+## Related Documentation
+
+- [USB Storage](usb-storage.md)
+- [Router Provisioning](../installation/provisioning.md)
+- [Tool Reference](../tool-reference/tool-reference.md)

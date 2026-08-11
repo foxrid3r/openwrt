@@ -2,6 +2,7 @@
 
 ## Installation
 - [Flashing and setting up OpenWrt on the Linksys E8450](installation/linksys-e8450.md)
+- [Router provisioning](installation/provisioning.md)
 
 ## Image building
 - [Building the Custom Image](image-builder/building-custom-image.md)
@@ -9,13 +10,16 @@
 
 ## Networking
 - [Custom DHCP modes](networking/dhcp-modes.md)
-- [Set DHCP range](networking/dhcp-range.md)
+- [Set DHCP range](networking/set-dhcp-range.md)
 - [DHCP lease reclamation](networking/dhcp-lease-reclamation.md)
 
 ## Services
 - [FTP server](services/ftp.md)
 - [NTP](services/ntp.md)
-- [USB auto-mount](services/usb-automount.md)
+- [USB auto-mount](services/usb-storage.md)
 
 ## LuCI
 - [Adding custom tools to LuCI](luci/custom-tools.md)
+
+## Reference
+- [Tool reference](tool-reference/tool-reference.md)

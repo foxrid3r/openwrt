@@ -34,15 +34,20 @@ The script downloads and verifies the requested ImageBuilder, applies the `files
 
 See [docs/image-builder/custom-image.md](docs/image-builder/custom-image.md) for background and setup notes.
 
-## First-boot security
+## First-boot credentials
 
-This public repository intentionally contains **no root password hashes, FTP password hashes, SSH host private keys, or real Wi-Fi passwords**. The sample wireless configuration uses `CHANGE_ME_*` values. Set deployment-specific credentials before use.
+The custom image includes shared factory credentials so a newly flashed router can be accessed and provisioned immediately.
 
-The FTP-only `admin` account is created with a locked password. Set it after first boot with:
+| Service | Username | Factory password |
+|---|---|---|
+| SSH / LuCI | `root` | `Admin12345!` |
+| Machine Wi-Fi | — | `Admin12345!` |
+| FTP | `admin` | `admin` |
 
-```sh
-passwd admin
-```
+The NTP uplink intentionally uses placeholder values (`CHANGE_ME_INTERNET_NETWORK` and `CHANGE_ME_PASSWORD`) rather than credentials for a real external Wi-Fi network.
+
+> [!IMPORTANT]
+> These factory credentials are stored in this public repository and must be treated as public, shared bootstrap credentials. Change deployment-specific credentials when unique credentials are required.
 
 The router provisioning utility can be run with:
 
@@ -50,9 +55,19 @@ The router provisioning utility can be run with:
 provision-router
 ```
 
+See [Router Provisioning](docs/installation/provisioning.md).
+
+The FTP password is managed separately from `provision-router` and can be changed with:
+
+```sh
+passwd admin
+```
+
 ## Documentation
 
 Start with [docs/README.md](docs/README.md).
+
+For a quick command summary, see the [Tool Reference](docs/tool-reference/tool-reference.md).
 
 ## Releases
 

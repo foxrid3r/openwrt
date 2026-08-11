@@ -1,221 +1,195 @@
-# OpenWrt DHCP Mode Control Script (nftables / firewall4)
 
-This document describes how to add and use a **DHCP control mode** on OpenWrt
-using `nftables` and `firewall4`, including an optional shortcut command
-for quick mode switching.
+# DHCP Modes
 
-The script dynamically writes rules into:
+The custom image provides the `dhcp-mode` command for controlling whether DHCP traffic is permitted on the router's wired LAN ports.
 
-```
-/usr/share/nftables.d/ruleset-pre/1-dhcp-drop-wired.nft
-```
-
-and reloads the firewall to apply the change.
-
----
+The feature is implemented with OpenWrt `firewall4` and nftables.
 
 ## Purpose
 
-The script supports three operating modes:
+Industrial machine networks often contain equipment with fixed IP addresses. Allowing an arbitrary laptop or other temporary device to obtain a DHCP address can be undesirable.
 
-| Mode        | Behavior |
-|-------------|----------|
-| `ON`        | No DHCP filtering (wired ports behave normally) |
-| `OFF`       | DHCP completely blocked on wired ports |
-| `COGNEX_ON` | Only Cognex devices are allowed to use DHCP on wired ports |
+`dhcp-mode` provides three runtime modes:
 
-This is useful in industrial or machine-vision networks where DHCP must be
-tightly controlled on wired interfaces.
+| Mode | Behavior |
+|---|---|
+| `ON` | Normal wired DHCP; no custom DHCP filtering |
+| `OFF` | Block DHCP on all wired LAN ports |
+| `COGNEX_ON` | Allow DHCP only for Cognex devices identified by OUI `00:d0:24` |
 
----
+The factory image ships in:
 
-## Assumptions
-
-- OpenWrt using `firewall4` (nftables)
-- Wired ports are named: `lan1`, `lan2`, `lan3`, `lan4`
-- Cognex OUI: `00:d0:24`
-- Script executed as `root`
-
----
-
-## Install the Script
-
-Create the script file:
-
-```sh
-nano /usr/bin/dhcp-mode
+```text
+COGNEX_ON
 ```
-
-Paste the following contents exactly:
-
-```sh
-#!/bin/sh
-set -eu
-
-TARGET="/usr/share/nftables.d/ruleset-pre/1-dhcp-drop-wired.nft"
-
-usage() {
-    echo "Usage: $0 {OFF|ON|COGNEX_ON}" >&2
-    exit 2
-}
-
-MODE="${1:-}"
-[ -n "$MODE" ] || usage
-
-# Must be root
-if [ "$(id -u)" -ne 0 ]; then
-    echo "ERROR: must run as root" >&2
-    exit 1
-fi
-
-# Ensure directory exists
-DIR="$(dirname "$TARGET")"
-[ -d "$DIR" ] || { echo "ERROR: missing directory: $DIR" >&2; exit 1; }
-
-# Write to a temp file then atomically move into place
-TMP="$(mktemp "${DIR}/.1-dhcp-drop-wired.nft.XXXXXX")"
-cleanup() { rm -f "$TMP"; }
-trap cleanup EXIT
-
-case "$MODE" in
-    ON)
-        # NOTE: This empties the file, effectively disabling the wired-DHCP drop rules.
-        : > "$TMP"
-        ;;
-    OFF)
-        cat > "$TMP" <<'EOF'
-table bridge filter
-flush table bridge filter
-
-table bridge filter {
-    chain input {
-        type filter hook input priority -200; policy accept;
-
-        # Drop all DHCP client->server on wired ports
-        iifname { "lan1", "lan2", "lan3", "lan4" } ip protocol udp udp dport 67 counter drop
-    }
-
-    chain output {
-        type filter hook output priority 100; policy accept;
-
-        # Drop all DHCP server->client on wired ports
-        oifname { "lan1", "lan2", "lan3", "lan4" } ip protocol udp udp sport 67 counter drop
-    }
-}
-EOF
-        ;;
-    COGNEX_ON)
-        cat > "$TMP" <<'EOF'
-table bridge filter
-flush table bridge filter
-
-table bridge filter {
-    chain input {
-        type filter hook input priority -200; policy accept;
-
-        # Allow DHCP DISCOVER/REQUEST from Cognex devices on wired ports
-        iifname { "lan1", "lan2", "lan3", "lan4" } \
-        ether saddr & ff:ff:ff:00:00:00 == 00:d0:24:00:00:00 \
-        ip protocol udp udp dport 67 counter accept
-
-        # Drop all other DHCP client->server on wired ports
-        iifname { "lan1", "lan2", "lan3", "lan4" } ip protocol udp udp dport 67 counter drop
-    }
-
-    chain output {
-        type filter hook output priority 100; policy accept;
-
-        # Allow DHCP OFFER/ACK to Cognex devices on wired ports
-        oifname { "lan1", "lan2", "lan3", "lan4" } \
-        ether daddr & ff:ff:ff:00:00:00 == 00:d0:24:00:00:00 \
-        ip protocol udp udp sport 67 counter accept
-
-        # Drop all other DHCP server->client on wired ports
-        oifname { "lan1", "lan2", "lan3", "lan4" } ip protocol udp udp sport 67 counter drop
-    }
-}
-EOF
-        ;;
-    *)
-        usage
-        ;;
-esac
-
-# Preserve file mode/owner if the target exists (best effort on BusyBox)
-if [ -e "$TARGET" ]; then
-    # If BusyBox lacks --reference, just force a sane default
-    chmod 0644 "$TMP" 2>/dev/null || true
-    chown root:root "$TMP" 2>/dev/null || true
-else
-    chmod 0644 "$TMP" 2>/dev/null || true
-    chown root:root "$TMP" 2>/dev/null || true
-fi
-
-# Atomic replace
-mv -f "$TMP" "$TARGET"
-trap - EXIT
-
-# Reload firewall (preferred over restart)
-if /etc/init.d/firewall reload; then
-    echo "OK: wrote $TARGET for mode '$MODE' and reloaded firewall."
-else
-    echo "WARN: wrote $TARGET for mode '$MODE' but firewall reload failed." >&2
-    exit 3
-fi
-```
-
-Make it executable:
-
-```sh
-chmod +x /usr/bin/dhcp-mode
-```
-
----
 
 ## Usage
+
+Run as `root`:
 
 ```sh
 dhcp-mode ON
+```
+
+```sh
 dhcp-mode OFF
+```
+
+```sh
 dhcp-mode COGNEX_ON
 ```
 
----
+The command is installed at:
 
-## Adding a Shortcut Command (Recommended)
-
-To make the script easier to run, create a shell alias so you don’t have to
-type the full path or script name.
-
-Create symlink
-
-```sh
-ln -s /usr/bin/dhcp-mode /usr/bin/dhcpwired
+```text
+/usr/bin/dhcp-mode
 ```
 
-The shortcut will now be available:
-- After logout/login
-- After reboot
-- In all interactive shells
+## Affected Interfaces
 
----
+The current rules apply to:
 
-## Usage
-
-```sh
-dhcpwired ON
-dhcpwired OFF
-dhcpwired COGNEX_ON
+```text
+lan1
+lan2
+lan3
+lan4
 ```
 
----
+The Wi-Fi interfaces are not filtered by this mechanism.
+
+## How It Works
+
+`dhcp-mode` generates the nftables include file:
+
+```text
+/usr/share/nftables.d/ruleset-pre/1-dhcp-drop-wired.nft
+```
+
+After replacing the file, it reloads the OpenWrt firewall:
+
+```sh
+/etc/init.d/firewall reload
+```
+
+The file is written through a temporary file and atomically moved into place so the active rules file is not left partially written.
+
+## `ON`
+
+`ON` means DHCP is enabled normally on the wired ports.
+
+The managed nftables include file is emptied, so no custom wired-DHCP filtering rules are applied.
+
+```sh
+dhcp-mode ON
+```
+
+## `OFF`
+
+`OFF` blocks both directions of DHCP on `lan1` through `lan4`:
+
+- Client-to-server DHCP requests using UDP destination port 67.
+- Server-to-client DHCP responses using UDP source port 67.
+
+```sh
+dhcp-mode OFF
+```
+
+Other non-DHCP Ethernet traffic is unaffected by these custom rules.
+
+## `COGNEX_ON`
+
+`COGNEX_ON` allows DHCP only when the Ethernet MAC address matches the Cognex OUI:
+
+```text
+00:d0:24
+```
+
+The nftables mask:
+
+```text
+ff:ff:ff:00:00:00
+```
+
+compares only the first three bytes of the MAC address.
+
+For client-to-server traffic, the source MAC is checked. For server-to-client traffic, the destination MAC is checked.
+
+All other wired DHCP traffic is dropped.
+
+## Factory Rule File
+
+The image overlay contains a pre-populated:
+
+```text
+/usr/share/nftables.d/ruleset-pre/1-dhcp-drop-wired.nft
+```
+
+with the `COGNEX_ON` rules.
+
+This makes `COGNEX_ON` the effective factory behavior before `dhcp-mode` is run for the first time.
 
 ## Verification
 
-After switching modes:
+Display the custom bridge filter table:
 
 ```sh
 nft list table bridge filter
 ```
 
-Confirm that DHCP traffic on `lan1`–`lan4` matches the selected mode.
+You can also inspect the generated include file:
+
+```sh
+cat /usr/share/nftables.d/ruleset-pre/1-dhcp-drop-wired.nft
+```
+
+For `ON`, the file should be empty.
+
+For `OFF` or `COGNEX_ON`, it should contain the corresponding bridge-filter rules.
+
+## Troubleshooting
+
+### Command Must Run as Root
+
+If run without root privileges, the command exits with:
+
+```text
+ERROR: must run as root
+```
+
+### Firewall Reload Fails
+
+The command may successfully replace the rule file but fail while reloading the firewall.
+
+Inspect firewall configuration and logs:
+
+```sh
+/etc/init.d/firewall restart
+logread -e firewall
+```
+
+### Verify Interface Names
+
+The current rules explicitly reference:
+
+```text
+lan1
+lan2
+lan3
+lan4
+```
+
+If the hardware configuration changes, update both `dhcp-mode` and the factory nftables include file so the interface names remain consistent.
+
+## Files
+
+| File | Purpose |
+|---|---|
+| `/usr/bin/dhcp-mode` | User-facing mode-selection command |
+| `/usr/share/nftables.d/ruleset-pre/1-dhcp-drop-wired.nft` | Active generated nftables rules |
+
+## Related Documentation
+
+- [DHCP Range Configuration](set-dhcp-range.md)
+- [DHCP Lease Reclamation](dhcp-lease-reclamation.md)
+- [Tool Reference](../tool-reference/tool-reference.md)

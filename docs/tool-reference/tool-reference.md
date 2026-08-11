@@ -186,7 +186,7 @@ The monitoring process is managed by the `dhcp-reclaim` OpenWrt service.
 
 ### Related Documentation
 
-See [DHCP Lease Reclamation](../networking/dhcp-reclamation.md).
+See [DHCP Lease Reclamation](../networking/dhcp-lease-reclamation.md).
 
 ---
 
@@ -218,7 +218,7 @@ The primary USB mount point is:
 
 ### Related Documentation
 
-See [USB Storage](../services/usb-auto-mount.md).
+See [USB Storage](../services/usb-storage.md).
 
 ---
 
@@ -268,7 +268,7 @@ For safety, the utility only operates within approved FTP storage locations.
 
 ### Related Documentation
 
-See [USB Storage](../services/usb-auto-mount.md).
+See [USB Storage](../services/usb-storage.md).
 
 ---
 
@@ -292,7 +292,7 @@ When exhaustion is detected, it invokes:
 
 The monitor is supervised by the `dhcp-reclaim` service.
 
-See [DHCP Lease Reclamation](../networking/dhcp-reclamation.md).
+See [DHCP Lease Reclamation](../networking/dhcp-lease-reclamation.md).
 
 ---
 
@@ -316,7 +316,7 @@ It can also be manually restarted:
 /etc/init.d/dhcp-reclaim restart
 ```
 
-See [DHCP Lease Reclamation](../networking/dhcp-reclamation.md).
+See [DHCP Lease Reclamation](../networking/dhcp-lease-reclamation.md).
 
 ---
 
@@ -330,7 +330,7 @@ Enables the DHCP reclamation service during initial router configuration.
 
 This script is intended to run automatically as part of OpenWrt's `uci-defaults` first-boot process.
 
-See [DHCP Lease Reclamation](../networking/dhcp-reclamation.md).
+See [DHCP Lease Reclamation](../networking/dhcp-lease-reclamation.md).
 
 ---
 
