@@ -9,17 +9,18 @@
 #   - LAN netmask (network.lan.netmask)
 #   - DHCP pool start/end (dhcp.lan.start + dhcp.lan.limit)
 #   - WiFi SSID + passphrase for the AP on radio1 (machine network)
-#   - WiFi SSID + passphrase for the station on radio0 (internet/NTP uplink)
+#   - WiFi SSID + passphrase for the station on radio0 (NTP uplink)
 #
 # Rules:
 # - If you press Enter on ANY prompt, that setting remains unchanged.
-# - Hostname and SSID may include underscores. Periods are NOT allowed.
+# - Hostname and machine-network SSID may include underscores. Periods are NOT allowed.
+# - NTP uplink SSID is accepted as entered because the upstream network is outside our control.
 #
 # Notes:
 # - DHCP "start/end" are full IPv4 addresses within the LAN subnet (e.g. 192.168.10.50 ... 192.168.10.120).
 #   Internally dnsmasq uses start+limit, so we convert end -> limit.
 # - Machine WiFi: select the AP wifi-iface attached to radio1.
-# - Internet/NTP WiFi: select the station (STA) wifi-iface attached to radio0.
+# - NTP uplink WiFi: select the station (STA) wifi-iface attached to radio0.
 #
 # Install suggestion:
 #   /usr/sbin/provision-router
@@ -207,7 +208,12 @@ cur_dhcp_ignore="$(uci -q get dhcp.lan.ignore || echo 0)"
 wifi_section="$(find_wifi_iface "radio1" "ap" "machine-network AP")"
 cur_ssid="$(uci -q get "$wifi_section".ssid || true)"
 
-uplink_wifi_section="$(find_wifi_iface "radio0" "sta" "internet/NTP uplink")"
+uplink_wifi_section="$(find_wifi_iface "radio0" "sta" "NTP uplink")"
+uplink_network="$(uci -q get "$uplink_wifi_section".network || true)"
+
+[ "$uplink_network" = "ntp_uplink" ] || \
+    die "radio0 station is not attached to network 'ntp_uplink' (currently: '$uplink_network')"
+    
 cur_uplink_ssid="$(uci -q get "$uplink_wifi_section".ssid || true)"
 
 # Track what will change
@@ -368,8 +374,8 @@ wifi_pass="$(prompt_secret_optional "WiFi passphrase (machine AP / radio1)")"
 wifi_pass="$(clean_line "$wifi_pass")"
 [ -n "$wifi_pass" ] && do_wifi_pass=1
 
-# ---- Internet/NTP uplink WiFi SSID / passphrase (blank = unchanged) ----
-uplink_ssid_in="$(prompt_optional "Internet/NTP WiFi SSID (radio0 station)" "$cur_uplink_ssid")"
+# ---- NTP uplink WiFi SSID / passphrase (blank = unchanged) ----
+uplink_ssid_in="$(prompt_optional "NTP uplink WiFi SSID (radio0 station)" "$cur_uplink_ssid")"
 uplink_ssid_in="$(clean_line "$uplink_ssid_in")"
 if [ -n "$uplink_ssid_in" ]; then
   # Unlike the machine AP SSID, an upstream network is outside our control and
@@ -378,7 +384,7 @@ if [ -n "$uplink_ssid_in" ]; then
   do_uplink_ssid=1
 fi
 
-uplink_wifi_pass="$(prompt_secret_optional "Internet/NTP WiFi passphrase (radio0 station)")"
+uplink_wifi_pass="$(prompt_secret_optional "NTP uplink WiFi passphrase (radio0 station)")"
 uplink_wifi_pass="$(clean_line "$uplink_wifi_pass")"
 [ -n "$uplink_wifi_pass" ] && do_uplink_wifi_pass=1
 
