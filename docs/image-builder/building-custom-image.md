@@ -212,7 +212,7 @@ Edit the banner file to include the image version, OpenWrt  version and build da
 sudo nano ./files/etc/banner
 ```
 
-```bash
+```
 ╔═════════════════════════════════════════════════════════╗
 ║               ___ _   ___     _____ ___                 ║
 ║              |_ _| \ | \ \   / /_ _/ _ \                ║
