@@ -27,46 +27,46 @@ As of 2026-04-30, the maintainer for the Linksys E8450 for OpenWrt is [Daniel Go
   
 6. Click exactly inside the radio button to confirm the terms and conditions, then abort the wizard. (Complete the wizard if you are running stock firmware version 1.2.x)
   
-    ![image1.png](../images/image1.png )
+    ![Linksys setup wizard terms and conditions](../images/linksys-e8450-stock-setup-terms.png)
   
 7. You should then be greeted by the login screen; the stock password is "admin".
   
-    ![image2.png](../images/image2.png )
+    ![Linksys stock firmware login](../images/linksys-e8450-stock-login.png)
   
 8. If the firmware on the device is >= 1.2.00, then you will have to go through the process of setting to WAN on the device before proceeding.
   
-    ![image12.png](../images/image12.png )
+    ![Linksys stock firmware Wi-Fi settings](../images/linksys-e8450-stock-wifi-settings.png)
   
     `Set temporary password`
   
-    ![image23.png](../images/image23.png )
+    ![Linksys stock firmware router password](../images/linksys-e8450-stock-router-password.png)
   
     `Next`
   
-    ![image34.png](../images/image34.png )
+    ![Linksys stock firmware setup summary](../images/linksys-e8450-stock-setup-summary.png)
   
     `No, I’m done.`
   
-    ![image45.png](../images/image45.png )
+    ![Linksys add another node prompt](../images/linksys-e8450-stock-add-node-prompt.png)
   
     `Skip`
   
-    ![image47.png](../images/image47.png )
+    ![Linksys product registration](../images/linksys-e8450-stock-product-registration.png)
   
     `Next`
   
-    ![image48.png](../images/image48.png )
+    ![Linksys automatic updates setting](../images/linksys-e8450-stock-automatic-updates.png)
   
     `Make note of the factory firmware version. Done.`
   
-    ![image49.png](../images/image49.png )
+    ![Linksys setup complete screen](../images/linksys-e8450-stock-setup-complete.png)
   
     `Done`
   
-    ![image50.png](../images/image50.png )
+    ![Linksys setup finished](../images/linksys-e8450-stock-setup-finished.png)
   
 9. Navigate to `Administration -> Firmware Upgrade`.
-![image3.png](../images/image3.png )
+![Linksys stock firmware upgrade page](../images/linksys-e8450-stock-firmware-upgrade.png)
   
 10. Upload the firmware **installer** image. The purpose of this file is to convert the NAND flash layout on the router to UBI and get the router into a recovery state which will be used to upload a stock OpenWrt image for this router.
   
@@ -74,25 +74,25 @@ As of 2026-04-30, the maintainer for the Linksys E8450 for OpenWrt is [Daniel Go
   
     - Otherwise, when stock **firmware is >= 1.2.00.273012**, upload the **signed** image: `openwrt-...-mediatek-mt7622-linksys_e8450-ubi-initramfs-recovery-installer_signed.itb`
   
-    ![image4.png](../images/image4.png )
-    ![image6.png](../images/image6.png )
+    ![Select the OpenWrt installer image](../images/linksys-e8450-select-installer-image.png)
+    ![OpenWrt installer upload in progress](../images/linksys-e8450-installer-upload-progress.png)
   
 11. Wait for a minute, the OpenWrt recovery image should come up.
-![image7.png](../images/image7.png )
+![OpenWrt recovery login](../images/linksys-e8450-openwrt-recovery-login.png)
   
 12. Login at `root`. By default, there is no password.
   
 13. Navigate to `System -> Backup / Flash Firmware`.
-![image8.png](../images/image8.png )
+![OpenWrt Backup and Flash Firmware page](../images/linksys-e8450-openwrt-flash-firmware.png)
   
 14. Upload `openwrt-...-mediatek-mt7622-linksys_e8450-ubi-squashfs-sysupgrade.itb`. This is the stock OpenWrt image for this router.
-![image9.png](../images/image9.png )
-![image10.png](../images/image10.png )
-![image11.png](../images/image11.png )
-![image14.png](../images/image14.png )
+![OpenWrt flash image dialog](../images/linksys-e8450-openwrt-flash-image-dialog.png)
+![Select the OpenWrt sysupgrade image](../images/linksys-e8450-select-sysupgrade-image.png)
+![OpenWrt sysupgrade upload in progress](../images/linksys-e8450-sysupgrade-upload-progress.png)
+![OpenWrt flash image confirmation](../images/linksys-e8450-flash-image-confirmation.png)
   
 15. Do not retain any settings.
-![image13.png](../images/image13.png )
+![Disable the keep settings option](../images/linksys-e8450-disable-keep-settings.png)
   
 15. The device will reboot, you may proceed to backing up the stock/vendor bootchain.
   
@@ -101,15 +101,10 @@ As of 2026-04-30, the maintainer for the Linksys E8450 for OpenWrt is [Daniel Go
 These files are needed in case you want to restore the original/vendor firmware. They can also be used in emergency case for reflashing via JTAG.
   
 1. SSH into the router using Putty or terminal. Make a backup of the bootchain as shown below.
-![image15.png](../images/image15.png )
+![Back up the bootchain over SSH](../images/linksys-e8450-backup-bootchain-ssh.png)
   
-2. Connect to router using WinSCP
-![image16.png](../images/image16.png )
-  
-3. Copy `MTD` files out and save in a secure location, indicating which serial number these files belong to. **NOTE**: Since Installer v1.1.x, the boot backups are stored solely in **mtd0** and **mtd1**, so if those are the only 2 files in the **boot_backup** directory, this is expected. The screenshots below was taken during an installation while using v1.0.2 installer which stored the backup in 4 files (mtd0, mtd1, mt2, & mtd3).
-![image17.png](../images/image17.png )
-![image18.png](../images/image18.png )
-
+2. Copy `MTD` files out using scp and and save them in a secure location, indicating which serial number these files belong to. **NOTE**: Since Installer v1.1.x, the boot backups are stored solely in `mtd0` and `mtd1`, so if those are the only 2 files in the **boot_backup** directory, this is expected. The screenshots below was taken during an installation while using v1.0.2 installer which stored the backup in 4 files (`mtd0`, `mtd1`, `mtd2`, & `mtd3`).
+![Copy the bootchain backup with SCP](../images/linksys-e8450-copy-bootchain-scp.png)
 
 <div style="page-break-after: always;"></div>
   
@@ -133,27 +128,27 @@ The steps below outline how to go about installing the custom image on a Linksys
   
 `System > Backup/Flash Firmware`
   
-![image8.png](../images/image8.png )
+![OpenWrt Backup and Flash Firmware page](../images/linksys-e8450-openwrt-flash-firmware.png)
   
 `Flash new firmware image > Flash image…`
   
-![image9.png](../images/image9.png )
+![OpenWrt flash image dialog](../images/linksys-e8450-openwrt-flash-image-dialog.png)
   
 `Browse…`
   
-![image10.png](../images/image10.png )
+![Select the OpenWrt sysupgrade image](../images/linksys-e8450-select-sysupgrade-image.png)
   
 Select the Calvary custom image, `Calvary-openwrt-24.10.5-mediatek-mt7622-linksys_e8450-ubi-squashfs-sysupgrade.itb`
   
-![image46.png](../images/image46.png )
+![Select the custom sysupgrade image](../images/linksys-e8450-select-custom-sysupgrade-image.png)
   
 `Upload`
   
-![image14.png](../images/image14.png )
+![OpenWrt flash image confirmation](../images/linksys-e8450-flash-image-confirmation.png)
   
 `Do not retain any settings. Continue.`
   
-![image13.png](../images/image13.png )
+![Disable the keep settings option](../images/linksys-e8450-disable-keep-settings.png)
 
 
 <div style="page-break-after: always;"></div>
