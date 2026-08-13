@@ -106,6 +106,7 @@ These files are needed in case you want to restore the original/vendor firmware.
 2. Copy `MTD` files out using scp and and save them in a secure location, indicating which serial number these files belong to. **NOTE**: Since Installer v1.1.x, the boot backups are stored solely in `mtd0` and `mtd1`, so if those are the only 2 files in the **boot_backup** directory, this is expected. The screenshots below was taken during an installation while using v1.0.2 installer which stored the backup in 4 files (`mtd0`, `mtd1`, `mtd2`, & `mtd3`).
 ![Copy the bootchain backup with SCP](../images/linksys-e8450-copy-bootchain-scp.png)
 
+
 <div style="page-break-after: always;"></div>
   
   
