@@ -66,7 +66,8 @@ As of 2026-04-30, the maintainer for the Linksys E8450 for OpenWrt is [Daniel Go
     ![Linksys setup finished](../images/linksys-e8450-stock-setup-finished.png)
   
 9. Navigate to `Administration -> Firmware Upgrade`.
-![Linksys stock firmware upgrade page](../images/linksys-e8450-stock-firmware-upgrade.png)
+
+    ![Linksys stock firmware upgrade page](../images/linksys-e8450-stock-firmware-upgrade.png)
   
 10. Upload the firmware **installer** image. The purpose of this file is to convert the NAND flash layout on the router to UBI and get the router into a recovery state which will be used to upload a stock OpenWrt image for this router.
   
@@ -74,37 +75,55 @@ As of 2026-04-30, the maintainer for the Linksys E8450 for OpenWrt is [Daniel Go
   
     - Otherwise, when stock **firmware is >= 1.2.00.273012**, upload the **signed** image: `openwrt-...-mediatek-mt7622-linksys_e8450-ubi-initramfs-recovery-installer_signed.itb`
   
-    ![Select the OpenWrt installer image](../images/linksys-e8450-select-installer-image.png)
-    ![OpenWrt installer upload in progress](../images/linksys-e8450-installer-upload-progress.png)
+        ![Select the OpenWrt installer image](../images/linksys-e8450-select-installer-image.png)
+
+        ![OpenWrt installer upload in progress](../images/linksys-e8450-installer-upload-progress.png)
   
 11. Wait for a minute, the OpenWrt recovery image should come up.
-![OpenWrt recovery login](../images/linksys-e8450-openwrt-recovery-login.png)
+
+    ![OpenWrt recovery login](../images/linksys-e8450-openwrt-recovery-login.png)
   
-12. Login at `root`. By default, there is no password.
+12. Login as `root` user. By default, there is no password.
   
 13. Navigate to `System -> Backup / Flash Firmware`.
-![OpenWrt Backup and Flash Firmware page](../images/linksys-e8450-openwrt-flash-firmware.png)
+
+    ![OpenWrt Backup and Flash Firmware page](../images/linksys-e8450-openwrt-flash-firmware.png)
   
 14. Upload `openwrt-...-mediatek-mt7622-linksys_e8450-ubi-squashfs-sysupgrade.itb`. This is the stock OpenWrt image for this router.
-![OpenWrt flash image dialog](../images/linksys-e8450-openwrt-flash-image-dialog.png)
-![Select the OpenWrt sysupgrade image](../images/linksys-e8450-select-sysupgrade-image.png)
-![OpenWrt sysupgrade upload in progress](../images/linksys-e8450-sysupgrade-upload-progress.png)
-![OpenWrt flash image confirmation](../images/linksys-e8450-flash-image-confirmation.png)
+
+    ![OpenWrt flash image dialog](../images/linksys-e8450-openwrt-flash-image-dialog.png)
+
+    ![Select the OpenWrt sysupgrade image](../images/linksys-e8450-select-sysupgrade-image.png)
+
+    ![OpenWrt sysupgrade upload in progress](../images/linksys-e8450-sysupgrade-upload-progress.png)
+
+    ![OpenWrt flash image confirmation](../images/linksys-e8450-flash-image-confirmation.png)
   
 15. Do not retain any settings.
-![Disable the keep settings option](../images/linksys-e8450-disable-keep-settings.png)
+
+    ![Disable the keep settings option](../images/linksys-e8450-disable-keep-settings.png)
   
 15. The device will reboot, you may proceed to backing up the stock/vendor bootchain.
   
   
 # Backup stock/vendor bootchain
-These files are needed in case you want to restore the original/vendor firmware. They can also be used in emergency case for reflashing via JTAG.
+> [!IMPORTANT]
+> **DO NOT SKIP THIS STEP**.
+> These files are needed in case you want to restore the original/vendor firmware. More importantly, they can also be used in emergency case for reflashing via JTAG.
+
+> The boot backup contains low-level flash data required for booting and recovering the router. It may also contain device-specific factory data, including hardware calibration information and identifiers that cannot simply be recreated by reinstalling OpenWrt.
+>
+> Unlike the OpenWrt firmware and configuration files, some of this data is unique to the individual router. A backup from another Linksys E8450 should not be considered an equivalent replacement.
+>
+> This backup may be the only practical means of recovering the router if the bootloader, flash layout, or other critical partitions are damaged during flashing or subsequent maintenance.
   
 1. SSH into the router using Putty or terminal. Make a backup of the bootchain as shown below.
-![Back up the bootchain over SSH](../images/linksys-e8450-backup-bootchain-ssh.png)
+
+    ![Back up the bootchain over SSH](../images/linksys-e8450-backup-bootchain-ssh.png)
   
 2. Copy `MTD` files out using scp and and save them in a secure location, indicating which serial number these files belong to. **NOTE**: Since Installer v1.1.x, the boot backups are stored solely in `mtd0` and `mtd1`, so if those are the only 2 files in the **boot_backup** directory, this is expected. The screenshots below was taken during an installation while using v1.0.2 installer which stored the backup in 4 files (`mtd0`, `mtd1`, `mtd2`, & `mtd3`).
-![Copy the bootchain backup with SCP](../images/linksys-e8450-copy-bootchain-scp.png)
+
+    ![Copy the bootchain backup with SCP](../images/linksys-e8450-copy-bootchain-scp.png)
 
 
 <div style="page-break-after: always;"></div>
