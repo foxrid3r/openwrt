@@ -110,7 +110,7 @@ As of 2026-04-30, the maintainer for the Linksys E8450 for OpenWrt is [Daniel Go
 > [!IMPORTANT]
 > **DO NOT SKIP THIS STEP**.
 > These files are needed in case you want to restore the original/vendor firmware. More importantly, they can also be used in emergency case for reflashing via JTAG.
-
+>
 > The boot backup contains low-level flash data required for booting and recovering the router. It may also contain device-specific factory data, including hardware calibration information and identifiers that cannot simply be recreated by reinstalling OpenWrt.
 >
 > Unlike the OpenWrt firmware and configuration files, some of this data is unique to the individual router. A backup from another Linksys E8450 should not be considered an equivalent replacement.
