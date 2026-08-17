@@ -657,5 +657,5 @@ to UCI only when fragmented ranges are not configured.
 ## Related Documentation
 
 - [DHCP Range Configuration](set-dhcp-range.md)
-- [DHCP Modes](dhcp-modes.md)
-- [Tool Reference](../tool-reference/tool-reference.md)
+- [DHCP Modes](dhcp-mode.md)
+- [Tool Reference](README.md)

@@ -45,7 +45,7 @@ Configure the real upstream SSID and password with:
 provision-router
 ```
 
-See [Router Provisioning](../installation/provisioning.md).
+See [Router Provisioning](../getting-started/provisioning.md).
 
 ## Network Interface
 
@@ -207,5 +207,5 @@ Verify there are no forwarding rules between `lan` and `ntp_uplink`, and confirm
 
 ## Related Documentation
 
-- [Router Provisioning](../installation/provisioning.md)
-- [Custom OpenWrt Image](../image-builder/custom-image.md)
+- [Router Provisioning](../getting-started/provisioning.md)
+- [Custom OpenWrt Image](README.md)

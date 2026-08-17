@@ -1,42 +1,55 @@
-# OpenWrt Machine Router
+# Linksys E8450 Custom OpenWrt Image
 
-Custom OpenWrt firmware configuration for the Linksys E8450 / Belkin RT3200 used as a portable industrial machine-network router.
+This repository documents and builds a custom OpenWrt image for the Linksys E8450 / Belkin RT3200. It is primarily an end-user guide for flashing and operating the router. It also contains the ImageBuilder inputs needed to reproduce the firmware.
 
-## Features
+> [!CAUTION]
+> Flashing firmware can make a router unbootable. Read the complete installation guide before starting, use an image intended for the Linksys E8450 UBI layout, and preserve the router's device-specific bootchain backup.
 
-- Reproducible ImageBuilder-based firmware build
-- Interactive router provisioning
-- Consecutive and fragmented DHCP pool configuration
-- Automatic DHCP lease reclamation
-- Wired DHCP filtering modes
-- USB storage auto-mount/eject tools
-- vsftpd-based FTP service
-- NTP/uplink configuration
-- Custom LuCI tooling
-- Versioned login banner
+## Choose your path
 
-## Repository layout
+### I want to install or use the image
 
-- `build/` — reproducible firmware build script and package list
-- `files/` — OpenWrt ImageBuilder filesystem overlay
-- `docs/` — GitHub-native Markdown documentation
-- `output/` — generated firmware (ignored by Git)
+1. [Flash OpenWrt or upgrade to the custom image](docs/getting-started/flashing-e8450.md)
+2. [Provision the router after flashing](docs/getting-started/provisioning.md)
+3. [Review the custom image's defaults and features](docs/custom-image/README.md)
+4. [Look up a built-in command](docs/tools/README.md)
 
-## Build
+Already running a compatible E8450 UBI OpenWrt release? Go directly to **Custom image installation** in the [flashing guide](docs/getting-started/flashing-e8450.md#custom-image-installation).
 
-On a Linux system with the OpenWrt ImageBuilder dependencies installed:
+### I want to build the image
+
+1. [Set up Linux or WSL and run the build](docs/building/image-builder.md)
+2. Review the package list in [`build/packages.txt`](build/packages.txt)
+3. Review the filesystem overlay in [`files/`](files/README.md)
+
+The normal build command, run from the repository root, is:
+
+```bash
+./build/build.sh <image-version> [openwrt-version]
+```
+
+For example:
 
 ```bash
 ./build/build.sh 1.6.1 24.10.5
 ```
 
-The script downloads and verifies the requested ImageBuilder, applies the `files/` overlay, generates the version banner, builds the Linksys E8450 UBI image, and copies generated firmware into `output/`.
+Generated firmware is copied to `output/`, which is ignored by Git.
 
-See [docs/image-builder/custom-image.md](docs/image-builder/custom-image.md) for background and setup notes.
+## What the custom image includes
 
-## First-boot credentials
+- Interactive first-run provisioning
+- Consecutive or fragmented DHCP pools
+- Wired-port DHCP filtering modes
+- Automatic DHCP lease reclamation
+- USB storage mounting and safe-eject tools
+- A vsftpd FTP service
+- An isolated NTP uplink
+- Custom LuCI controls and a versioned login banner
 
-The custom image includes shared factory credentials so a newly flashed router can be accessed and provisioned immediately.
+See [Custom Image Defaults and Features](docs/custom-image/README.md) for the configuration details.
+
+## Factory credentials
 
 | Service | Username | Factory password |
 |---|---|---|
@@ -44,35 +57,20 @@ The custom image includes shared factory credentials so a newly flashed router c
 | Machine Wi-Fi | — | `Admin12345!` |
 | FTP | `admin` | `admin` |
 
-The NTP uplink intentionally uses placeholder values (`CHANGE_ME_INTERNET_NETWORK` and `CHANGE_ME_PASSWORD`) rather than credentials for a real external Wi-Fi network.
-
 > [!IMPORTANT]
-> These factory credentials are stored in this public repository and must be treated as public, shared bootstrap credentials. Change deployment-specific credentials when unique credentials are required.
+> These credentials are published in this repository and are not secrets. Run `provision-router` after installation and change deployment credentials as appropriate. The FTP password is separate and can be changed with `passwd admin`.
 
-The router provisioning utility can be run with:
+## Repository map
 
-```sh
-provision-router
-```
+| Path | Contents |
+|---|---|
+| [`docs/`](docs/README.md) | Installation, operation, feature, and build documentation |
+| [`build/`](build/README.md) | Build script and package selection |
+| [`files/`](files/README.md) | Files copied into the image's root filesystem |
+| `output/` | Locally generated firmware; not committed |
 
-See [Router Provisioning](docs/installation/provisioning.md).
+Before publishing, complete the [repository sanitization review](SANITIZATION.md) and [publishing checklist](PUBLISHING_CHECKLIST.md). Tested firmware images should be distributed through GitHub Releases, not committed to the repository.
 
-The FTP password is managed separately from `provision-router` and can be changed with:
+## Project status
 
-```sh
-passwd admin
-```
-
-## Documentation
-
-Start with [docs/README.md](docs/README.md).
-
-For a quick command summary, see the [Tool Reference](docs/tool-reference/tool-reference.md).
-
-## Releases
-
-Do not commit generated firmware images to the repository. Attach tested images to GitHub Releases instead.
-
-## License
-
-A project license has not been selected yet. Choose and add an appropriate license before publishing publicly.
+A project license has not yet been selected. Add a license before redistributing the repository or its custom files.

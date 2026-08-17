@@ -244,5 +244,5 @@ exists.
 ## Related Documentation
 
 - [USB Storage](usb-storage.md)
-- [Router Provisioning](../installation/provisioning.md)
-- [Tool Reference](../tool-reference/tool-reference.md)
+- [Router Provisioning](../getting-started/provisioning.md)
+- [Tool Reference](../tools/README.md)

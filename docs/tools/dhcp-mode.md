@@ -192,4 +192,4 @@ If the hardware configuration changes, update both `dhcp-mode` and the factory n
 
 - [DHCP Range Configuration](set-dhcp-range.md)
 - [DHCP Lease Reclamation](dhcp-lease-reclamation.md)
-- [Tool Reference](../tool-reference/tool-reference.md)
+- [Tool Reference](README.md)

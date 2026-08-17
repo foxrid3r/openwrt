@@ -1,16 +1,20 @@
-# Flashing & Setting Up OpenWrt on Linksys E8450
+# Flashing OpenWrt on the Linksys E8450
+
+This guide covers two different starting points. Choose the one that matches the router now:
+
+| Current state | Follow |
+|---|---|
+| Stock Linksys firmware | [First-time OpenWrt installation](#first-time-openwrt-installation) |
+| Compatible OpenWrt UBI installation | [Custom image installation](#custom-image-installation) |
+
+> [!IMPORTANT]
+> The E8450 installation and migration requirements can change. Before flashing, compare this guide with the current [OpenWrt device page](https://openwrt.org/toh/linksys/e8450) and [official UBI installer documentation](https://github.com/dangowrt/owrt-ubi-installer). Those upstream sources take precedence for installer choice and layout migrations.
   
-## Version: 1.3
+> [!CAUTION]
+> Do not use installer v1.0.3. Select the current installer release recommended by the upstream UBI installer project; do not rely on a version number copied from an older guide. The installer changes the bootloader and flash layout and normally must be run only once per device.
   
-As of 2026-04-30, the maintainer for the Linksys E8450 for OpenWrt is [Daniel Golle](https://github.com/dangowrt ). If flashing OpenWrt to this device for the first time, please familiarize yourself with the [GitHub](https://github.com/dangowrt/owrt-ubi-installer ) and [OpenWrt Wiki](https://openwrt.org/toh/linksys/e8450) pages for this device.
-  
-## ***CAUTION***
-  
-**DO NOT USE** installer v1.0.3. There is a bug within the installer that leaves these routers at risk of OKD.
-  
-**As of 2026-04-30, use Installer v.1.1.4**
-  
-# Flashing OpenWrt
+# First-time OpenWrt installation
+
 1. Factory Reset the router by holding down the reset button until the Power LED indicator starts blinking. Wait for the device to reset. If the device is brand new, this step is not required.
   
 - **IMPORTANT**: If a device running stock 1.1.x firmware rejects the installer image, the recommended work-around is to downgrade the device to version 1.0.x, and then re-attempt uploading the installer image. See "Downgrading Firmware" instructions below.
@@ -103,10 +107,10 @@ As of 2026-04-30, the maintainer for the Linksys E8450 for OpenWrt is [Daniel Go
 
     ![Disable the keep settings option](../images/linksys-e8450-disable-keep-settings.png)
   
-15. The device will reboot, you may proceed to backing up the stock/vendor bootchain.
+16. The device will reboot. Continue immediately with the stock/vendor bootchain backup below.
   
   
-# Backup stock/vendor bootchain
+## Back up the stock/vendor bootchain
 > [!IMPORTANT]
 > **DO NOT SKIP THIS STEP**.
 > These files are needed in case you want to restore the original/vendor firmware. More importantly, they can also be used in emergency case for reflashing via JTAG.
@@ -129,7 +133,7 @@ As of 2026-04-30, the maintainer for the Linksys E8450 for OpenWrt is [Daniel Go
 <div style="page-break-after: always;"></div>
   
   
-## Custom Image Installation
+## Custom image installation
 A custom firmware image is a version of OpenWrt that has been pre-built with specific packages, configurations, and features already included. Instead of starting with a generic, default system and manually configuring each setting, the image is tailored ahead of time to meet a particular need or application.
 
 This approach is useful because it shifts the work from repetitive manual setup to a one-time, controlled build process. The result is a ready-to-deploy system that behaves predictably across all devices it is installed on.
@@ -176,10 +180,10 @@ Select the Calvary custom image, `Calvary-openwrt-24.10.5-mediatek-mt7622-linksy
 # Related Documentation
 
 - [Router Provisioning](provisioning.md)
-- [DHCP Modes](../networking/dhcp-modes.md)
-- [DHCP Range Configuration](../networking/set-dhcp-range.md)
-- [DHCP Lease Reclamation](../networking/dhcp-lease-reclamation.md)
-- [FTP Server](../services/ftp.md)
-- [NTP](../services/ntp.md)
-- [USB Storage](../services/usb-storage.md)
-- [Tool Reference](../tool-reference/tool-reference.md)
+- [DHCP Modes](../tools/dhcp-mode.md)
+- [DHCP Range Configuration](../tools/set-dhcp-range.md)
+- [DHCP Lease Reclamation](../tools/dhcp-lease-reclamation.md)
+- [FTP Server](../custom-image/ftp-service.md)
+- [NTP](../custom-image/ntp-uplink.md)
+- [USB Storage](../custom-image/usb-storage.md)
+- [Tool Reference](../tools/README.md)

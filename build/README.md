@@ -36,14 +36,14 @@ The build script reads this file when constructing the ImageBuilder `PACKAGES` a
 
 The build process requires a Linux environment with the OpenWrt ImageBuilder dependencies installed.
 
-Althought WSL is not officially supported by the ImageBuilder, it does work (for now). See [Building the Custom Image](../docs/image-builder/building-custom-image.md) for more details.
+Although WSL is not officially supported by ImageBuilder, it can be used for this workflow. See [Building the Custom Image](../docs/building/image-builder.md) for details.
 
 ## Documentation
 
 For complete build instructions, prerequisites, WSL setup, troubleshooting, and an explanation of the build process, see:
 
-* [Building the Custom Image](../docs/image-builder/building-custom-image.md)
-* [Custom OpenWrt Image](../docs/image-builder/custom-image.md)
+* [Building the Custom Image](../docs/building/image-builder.md)
+* [Custom OpenWrt Image](../docs/custom-image/README.md)
 
 > [!NOTE]
-> This README is intended only as a quick reference for the contents of the `build/` directory. The documentation under `docs/image-builder/` is the authoritative build documentation.
+> This README is intended only as a quick reference for the contents of the `build/` directory. The documentation under `docs/building/` is the authoritative build documentation.

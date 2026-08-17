@@ -311,5 +311,5 @@ Confirm the expected UID/GID remain correct for the FTP account.
 
 ## Related Documentation
 
-- [FTP Server](ftp.md)
-- [Tool Reference](../tool-reference/tool-reference.md)
+- [FTP Server](ftp-service.md)
+- [Tool Reference](../tools/README.md)

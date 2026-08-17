@@ -106,7 +106,7 @@ reclaim-dhcp-lease
 watch-dhcp-exhaustion
 ```
 
-See the [Tool Reference](../docs/tool-reference/tool-reference.md) for descriptions and usage.
+See the [Tool Reference](../docs/tools/README.md) for descriptions and usage.
 
 ## `usr/share`
 
@@ -134,9 +134,9 @@ To apply an overlay change to an existing router, either:
 
 For information about building the image, see:
 
-* [Building the Custom Image](../docs/image-builder/building-custom-image.md)
-* [Custom OpenWrt Image](../docs/image-builder/custom-image.md)
+* [Building the Custom Image](../docs/building/image-builder.md)
+* [Custom OpenWrt Image](../docs/custom-image/README.md)
 
 For information about the tools contained in the overlay, see:
 
-* [Tool Reference](../docs/tool-reference/tool-reference.md)
+* [Tool Reference](../docs/tools/README.md)

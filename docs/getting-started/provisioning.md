@@ -196,7 +196,7 @@ Entering a new DHCP start and end range intentionally switches the router back t
 4. Removing `/etc/dnsmasq.d/custom-ranges.conf`.
 5. Restarting `dnsmasq`.
 
-For fragmented or specialized pool configuration, see [DHCP Range Configuration](../networking/set-dhcp-range.md).
+For fragmented or specialized pool configuration, see [DHCP Range Configuration](../tools/set-dhcp-range.md).
 
 ## Machine-Network Wi-Fi
 
@@ -242,7 +242,7 @@ The uplink SSID is accepted as entered because it must match an external network
 
 When changing only the uplink password, the utility preserves the interface's existing encryption mode.
 
-The NTP uplink is intentionally isolated from the machine LAN. See [NTP](../services/ntp.md).
+The NTP uplink is intentionally isolated from the machine LAN. See [NTP](../custom-image/ntp-uplink.md).
 
 ## Applying Changes
 
@@ -303,7 +303,7 @@ For consecutive or fragmented DHCP ranges:
 set-dhcp-range
 ```
 
-See [DHCP Range Configuration](../networking/set-dhcp-range.md).
+See [DHCP Range Configuration](../tools/set-dhcp-range.md).
 
 To control DHCP availability on wired ports:
 
@@ -313,9 +313,9 @@ dhcp-mode OFF
 dhcp-mode COGNEX_ON
 ```
 
-See [DHCP Modes](../networking/dhcp-modes.md).
+See [DHCP Modes](../tools/dhcp-mode.md).
 
-For a complete command summary, see the [Tool Reference](../tool-reference/tool-reference.md).
+For a complete command summary, see the [Tool Reference](../tools/README.md).
 
 ## Provisioning Summary
 
