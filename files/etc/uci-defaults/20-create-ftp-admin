@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -eu
+
 # Create the factory-default FTP user.
 #
 # Factory credentials:
@@ -14,18 +16,51 @@
 
 FTP_USER="admin"
 FTP_HOME="/mnt/usb/FTP"
+FTP_UID="1000"
+FTP_GID="55"
+
+command -v useradd >/dev/null 2>&1 || {
+    echo "ERROR: useradd is required to create ${FTP_USER}" >&2
+    exit 1
+}
+
+command -v chpasswd >/dev/null 2>&1 || {
+    echo "ERROR: chpasswd is required to set the ${FTP_USER} password" >&2
+    exit 1
+}
+
+# USB storage is mounted with uid=1000,gid=55. Refuse to create an account
+# with conflicting IDs rather than silently assigning unusable permissions.
+existing_uid_user="$(awk -F: -v uid="$FTP_UID" '$3 == uid { print $1; exit }' /etc/passwd)"
+if [ -n "$existing_uid_user" ] && [ "$existing_uid_user" != "$FTP_USER" ]; then
+    echo "ERROR: UID ${FTP_UID} is already used by ${existing_uid_user}" >&2
+    exit 1
+fi
+
+if ! awk -F: -v gid="$FTP_GID" '$3 == gid { found=1 } END { exit !found }' /etc/group; then
+    echo "ERROR: required FTP group GID ${FTP_GID} does not exist" >&2
+    exit 1
+fi
 
 # Create the FTP home directory if it does not already exist.
 mkdir -p "$FTP_HOME"
 
 # Create the admin user if it does not already exist.
 if ! id "$FTP_USER" >/dev/null 2>&1; then
-    adduser \
-        -D \
-        -H \
-        -h "$FTP_HOME" \
+    useradd \
+        -u "$FTP_UID" \
+        -g "$FTP_GID" \
+        -d "$FTP_HOME" \
         -s /bin/false \
+        -M \
         "$FTP_USER"
+fi
+
+actual_uid="$(id -u "$FTP_USER")"
+actual_gid="$(id -g "$FTP_USER")"
+if [ "$actual_uid" != "$FTP_UID" ] || [ "$actual_gid" != "$FTP_GID" ]; then
+    echo "ERROR: ${FTP_USER} must use UID ${FTP_UID} and GID ${FTP_GID}" >&2
+    exit 1
 fi
 
 # Set the factory-default FTP password.

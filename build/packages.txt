@@ -12,3 +12,5 @@ kmod-nft-bridge
 nftables
 luci
 exfat-fsck
+shadow-useradd
+shadow-chpasswd
