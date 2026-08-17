@@ -15,7 +15,34 @@ config zone
 config zone
 	option name 'ntp_uplink'
 	option input 'REJECT'
-	option output 'ACCEPT'
+	option output 'REJECT'
 	option forward 'REJECT'
 	list network 'ntp_uplink'
 
+config rule
+	option name 'Allow-DHCP-Client-Output'
+	option dest 'ntp_uplink'
+	option proto 'udp'
+	option src_port '68'
+	option dest_port '67'
+	option family 'ipv4'
+	option target 'ACCEPT'
+
+config rule
+	option name 'Allow-DHCP-Client-Reply'
+	option src 'ntp_uplink'
+	option proto 'udp'
+	option src_port '67'
+	option dest_port '68'
+	option family 'ipv4'
+	option target 'ACCEPT'
+
+config rule
+	option name 'Allow-NTP-Output'
+	option dest 'ntp_uplink'
+	option proto 'udp'
+	option dest_port '123'
+	list dest_ip '129.6.15.28'
+	list dest_ip '132.163.96.1'
+	option family 'ipv4'
+	option target 'ACCEPT'

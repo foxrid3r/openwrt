@@ -18,6 +18,7 @@ Use this checklist before publishing repository changes or a firmware release.
 - [ ] A SHA-256 checksum was recorded.
 - [ ] The sysupgrade image was tested on the intended E8450 UBI upgrade path.
 - [ ] First boot, provisioning, LuCI, SSH, DHCP modes, NTP, FTP, and USB handling were tested as applicable.
+- [ ] NTP synchronization works while general router and LAN Internet access through `ntp_uplink` remains blocked.
 - [ ] Factory-reset and recovery behavior were considered.
 
 ## Release notes

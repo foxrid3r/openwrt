@@ -16,8 +16,9 @@ The initial DHCP pool is `192.168.1.124` through `192.168.1.128`. See [DHCP beha
 ## Isolation model
 
 - Wired LAN ports and machine Wi-Fi serve the local automation network.
-- A separate Wi-Fi client interface can obtain internet time.
-- Firewall rules prevent that NTP uplink from routing traffic to or from the machine LAN.
+- A separate Wi-Fi client interface can obtain Internet time from two explicitly routed NTP servers.
+- The NTP uplink has no default route, does not accept peer DNS, and permits only DHCP plus UDP/123 to those servers.
+- Firewall rules prevent the NTP uplink from routing traffic to or from the machine LAN.
 - Wired DHCP can be enabled, disabled, or restricted to Cognex devices independently of other traffic.
 
 See [NTP uplink](ntp-uplink.md) for the isolated time source and [DHCP mode](../tools/dhcp-mode.md) for wired-port filtering.

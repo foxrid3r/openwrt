@@ -48,6 +48,9 @@ This ensures:
 
 # 1️⃣ Required Packages
 
+> [!NOTE]
+> The custom image's NTP-only uplink blocks general Internet access by default. Before running `opkg`, follow [Temporary maintenance access](../custom-image/ntp-uplink.md#temporary-maintenance-access), and restore the restricted settings when finished.
+
 ``` sh
 opkg update
 opkg install rpcd-mod-ucode ucode ucode-mod-fs

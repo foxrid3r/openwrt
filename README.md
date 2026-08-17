@@ -44,7 +44,7 @@ Generated firmware is copied to `output/`, which is ignored by Git.
 - Automatic DHCP lease reclamation
 - USB storage mounting and safe-eject tools
 - A vsftpd FTP service
-- An isolated NTP uplink
+- A strictly filtered NTP-only uplink
 - Custom LuCI controls and a versioned login banner
 
 See [Custom Image Defaults and Features](docs/custom-image/README.md) for the configuration details.

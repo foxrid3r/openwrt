@@ -27,6 +27,7 @@ config interface 'lan'
 config interface 'ntp_uplink'
 	option proto 'dhcp'
 	option peerdns '0'
+	option defaultroute '0'
 	option metric '50'
 
 config route
