@@ -93,7 +93,7 @@ Before distributing an image:
 3. Test the image on the intended hardware and upgrade path.
 4. Publish the tested artifact through a release; do not commit it.
 
-Follow the [custom image installation instructions](../getting-started/flashing-e8450.md#custom-image-installation) when flashing it.
+Follow the [final firmware installation instructions](../getting-started/flashing-e8450.md#install-the-final-firmware) when flashing it.
 
 ## Changing the image
 

@@ -8,7 +8,7 @@ This guide covers two different starting points. Choose the one that matches the
 | Current state | Follow |
 |---|---|
 | Stock Linksys firmware | [Run the one-time installer, then choose stock OpenWrt or the custom image](#first-time-openwrt-installation) |
-| Compatible OpenWrt UBI installation | [Custom image installation](#custom-image-installation) |
+| Compatible OpenWrt UBI installation | [Install the final firmware](#install-the-final-firmware) |
 
 > [!IMPORTANT]
 > The E8450 installation and migration requirements can change. Before flashing, compare this guide with the current [OpenWrt device page](https://openwrt.org/toh/linksys/e8450) and [official UBI installer documentation](https://github.com/dangowrt/owrt-ubi-installer). Those upstream sources take precedence for installer choice and layout migrations.
@@ -91,7 +91,11 @@ This guide covers two different starting points. Choose the one that matches the
     ![OpenWrt recovery login](../screenshots/linksys-e8450-openwrt-recovery-login.png)
   
 12. Login as `root` user. By default, there is no password.
-  
+
+## Install the final firmware
+
+Continue here after the one-time installer. If the router already runs a compatible OpenWrt UBI image, you can skip the installer steps, sign in to LuCI, and begin here instead.
+
 13. Navigate to `System -> Backup / Flash Firmware`.
 
     ![OpenWrt Backup and Flash Firmware page](../screenshots/linksys-e8450-openwrt-flash-firmware.png)
@@ -120,7 +124,7 @@ This guide covers two different starting points. Choose the one that matches the
 
     ![Disable the keep settings option](../screenshots/linksys-e8450-disable-keep-settings.png)
   
-16. The device will reboot. Continue immediately with the stock/vendor bootchain backup below.
+16. The device will reboot. After a first-time UBI conversion, continue immediately with the stock/vendor bootchain backup below. For an existing OpenWrt installation, confirm that its original bootchain backup is already stored safely off the router.
   
   
 ## Back up the stock/vendor bootchain
@@ -231,6 +235,8 @@ Leaving the only copy on the router is inadequate: storage failure, accidental e
     ![Copy the bootchain backup with SCP](../screenshots/linksys-e8450-copy-bootchain-scp.png)
 
 5. Verify that the copied files can be read, then label the backup with the router's model and serial number. Store it in a protected location that is backed up separately.
+
+    ![Backup of the bootchain](../screenshots/linksys-e8450-bootchain-saved.png)
 
 > [!NOTE]
 >

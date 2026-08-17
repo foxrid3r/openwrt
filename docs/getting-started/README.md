@@ -8,7 +8,7 @@ Follow [Flashing the Linksys E8450](flashing-e8450.md). The first-time process c
 
 ## Router already running compatible OpenWrt UBI firmware
 
-Go directly to [Custom image installation](flashing-e8450.md#custom-image-installation). Do not run the UBI installer again unless current upstream migration instructions explicitly require it.
+Go directly to [Install the final firmware](flashing-e8450.md#install-the-final-firmware). Do not run the UBI installer again unless current upstream migration instructions explicitly require it.
 
 ## After flashing
 

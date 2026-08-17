@@ -14,7 +14,7 @@ This repository documents and builds a custom OpenWrt image for the Linksys E845
 3. [Review the custom image's defaults and features](docs/custom-image/README.md)
 4. [Look up a built-in command](docs/tools/README.md)
 
-Already running a compatible E8450 UBI OpenWrt release? Go directly to **Custom image installation** in the [flashing guide](docs/getting-started/flashing-e8450.md#custom-image-installation).
+Already running a compatible E8450 UBI OpenWrt release? Go directly to [Install the final firmware](docs/getting-started/flashing-e8450.md#install-the-final-firmware) in the flashing guide.
 
 ### I want to build the image
 

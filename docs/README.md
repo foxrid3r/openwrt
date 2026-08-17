@@ -26,7 +26,7 @@ Choose the path that matches what you are doing.
 | Task | Documentation |
 |---|---|
 | Install OpenWrt on a stock E8450 | [First-time installation](getting-started/flashing-e8450.md#first-time-openwrt-installation) |
-| Install this image on a compatible OpenWrt E8450 | [Custom image installation](getting-started/flashing-e8450.md#custom-image-installation) |
+| Install this image on a compatible OpenWrt E8450 | [Install the final firmware](getting-started/flashing-e8450.md#install-the-final-firmware) |
 | Change deployment settings | [Router provisioning](getting-started/provisioning.md) |
 | Allow or block wired DHCP | [`dhcp-mode`](tools/dhcp-mode.md) |
 | Change the DHCP pool | [`set-dhcp-range`](tools/set-dhcp-range.md) |
