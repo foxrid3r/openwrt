@@ -1,3 +1,6 @@
+Exit code: 0
+Wall time: 0.6 seconds
+Output:
 # Flashing OpenWrt on the Linksys E8450
 
 This guide covers two different starting points. Choose the one that matches the router now:
@@ -100,7 +103,8 @@ This guide covers two different starting points. Choose the one that matches the
     | Choice | Image |
     |---|---|
     | Official OpenWrt | `openwrt-...-mediatek-mt7622-linksys_e8450-ubi-squashfs-sysupgrade.itb` downloaded from OpenWrt |
-    | Custom image | The `linksys_e8450-ubi-squashfs-sysupgrade.itb` artifact provided by this project |
+    | Custom image | Download the latest `linksys_e8450-ubi-squashfs-sysupgrade.itb` artifact from this project's [Releases](https://github.com/foxrid3r/openwrt/releases) page|
+
 
     Use only an image built for the Linksys E8450 UBI profile. The screenshots show an official OpenWrt image, but the upload workflow is the same for the custom image.
 
@@ -120,61 +124,44 @@ This guide covers two different starting points. Choose the one that matches the
   
   
 ## Back up the stock/vendor bootchain
+
 > [!IMPORTANT]
-> **DO NOT SKIP THIS STEP**.
-> These files are needed in case you want to restore the original/vendor firmware. More importantly, they can also be used in emergency case for reflashing via JTAG.
 >
-> The boot backup contains low-level flash data required for booting and recovering the router. It may also contain device-specific factory data, including hardware calibration information and identifiers that cannot simply be recreated by reinstalling OpenWrt.
+> Do not skip this backup. The UBI installer preserves the router's original vendor bootchain in a `boot_backup` volume before replacing the Linksys boot environment. This data is specific to the individual router and may be required to restore vendor firmware or perform advanced recovery.
 >
-> Unlike the OpenWrt firmware and configuration files, some of this data is unique to the individual router. A backup from another Linksys E8450 should not be considered an equivalent replacement.
->
-> This backup may be the only practical means of recovering the router if the bootloader, flash layout, or other critical partitions are damaged during flashing or subsequent maintenance.
+> A downloaded Linksys firmware image is not an equivalent replacement for `boot_backup`. Copy the backup off the router immediately after the first OpenWrt installation and retain it permanently.
 
 ### Overview
 
-The first installation of OpenWrt on a Linksys E8450 is different from a normal firmware upgrade. The recommended OpenWrt installation process uses a **UBI installer** that restructures the router's NAND flash, installs an OpenWrt-compatible boot chain, and creates the UBI-based flash layout used by subsequent OpenWrt releases.
+The first installation of OpenWrt on a Linksys E8450 is different from a normal firmware upgrade. The recommended installation process uses a **UBI installer** that restructures the router's NAND flash, installs an OpenWrt-compatible bootchain, and creates the UBI-based flash layout used by subsequent OpenWrt releases.
 
-Because this conversion replaces portions of the original Linksys boot environment, the installer first preserves the existing vendor boot information in a dedicated backup volume on the router.
+Because this conversion replaces portions of the original Linksys boot environment, the installer first preserves the existing vendor boot information in a dedicated backup volume on the router. That backup is an important device-specific recovery asset and should be copied off the router immediately after the initial OpenWrt installation.
 
-This backup is an important **device-specific recovery asset** and should be copied off the router immediately after the initial OpenWrt installation and retained permanently.
+### What happens during the initial installation
 
----
+A factory Linksys E8450 uses a Linksys-specific NAND layout containing the bootloader, firmware, factory data, configuration information, and other partitions. OpenWrt's UBI installation uses a substantially different layout.
 
-### What Happens During the Initial OpenWrt Installation
+The one-time recovery installer is therefore not a normal firmware upgrade. At a high level, it:
 
-A factory Linksys E8450 uses a Linksys-specific NAND flash layout containing the bootloader, firmware, factory data, configuration information, and other partitions.
-
-The OpenWrt UBI installation uses a substantially different flash layout. The initial installation is therefore performed using the one-time recovery installer image:
-
-```text
-linksys_e8450-ubi-initramfs-recovery-installer.itb
-```
-
-This image is not a normal OpenWrt firmware upgrade. It performs the initial conversion of the router from the factory Linksys flash layout to the OpenWrt UBI layout.
-
-At a high level, the installer performs the following operations:
-
-1. Boots a temporary OpenWrt recovery/installation environment.
+1. Boots a temporary OpenWrt recovery and installation environment.
 2. Reads the existing contents of the router's NAND flash.
-3. Preserves the existing vendor boot chain in a backup.
-4. Reorganizes the NAND flash for the OpenWrt UBI layout.
+3. Preserves the existing vendor bootchain in a backup.
+4. Reorganizes the NAND flash into the OpenWrt UBI layout.
 5. Installs the OpenWrt-compatible bootloader infrastructure.
 6. Creates the UBI volumes used by OpenWrt.
-7. Installs the OpenWrt recovery and system images.
+7. Starts the recovery environment used to install the final firmware.
 
-The important point is that the backup is created **before the original boot environment is replaced**.
+The important point is that the installer creates the backup **before replacing the original boot environment**.
 
----
+### The `boot_backup` UBI volume
 
-### The `boot_backup` UBI Volume
-
-As part of the UBI conversion, the installer creates a dedicated UBI volume named:
+During conversion, the installer creates a dedicated UBI volume named:
 
 ```text
 boot_backup
 ```
 
-A typical OpenWrt UBI layout on the E8450 contains volumes such as:
+A typical E8450 UBI layout contains volumes such as:
 
 ```text
 ubi0
@@ -188,17 +175,11 @@ ubi0
 └── rootfs_data
 ```
 
-The `boot_backup` volume contains the backup made by the installer before it modifies the router's original boot environment.
+The `boot_backup` volume contains the data saved before the installer modifies the router's original boot environment. On a router converted directly from Linksys firmware, it preserves vendor bootchain information that may be needed to reconstruct the original flash layout and return to the vendor firmware.
 
-For a router being converted directly from the factory Linksys firmware, this backup preserves the original vendor boot-chain information needed to help reconstruct the original flash layout if the router ever needs to be returned to the Linksys firmware.
+### What is actually backed up?
 
----
-
-### What Is Actually Being Backed Up?
-
-The `boot_backup` volume should not be thought of as simply a copy of the Linksys firmware image.
-
-The factory E8450 NAND contains multiple partitions associated with the boot process and factory firmware layout, including components such as:
+`boot_backup` is not simply another copy of the downloadable Linksys firmware image. The factory NAND contains multiple components associated with booting and the vendor flash layout, including items such as:
 
 ```text
 Preloader
@@ -210,171 +191,56 @@ Kernel1
 Kernel2
 ```
 
-The OpenWrt UBI conversion replaces or reorganizes portions of this original layout. The installer therefore saves the relevant original boot-chain contents before performing the conversion.
+The UBI conversion replaces or reorganizes portions of that layout. A downloaded stock firmware image does not necessarily contain everything needed to reconstruct the original boot environment after conversion.
 
-This makes the backup fundamentally different from downloading a stock Linksys firmware image from the Internet. A stock firmware image alone does not necessarily contain everything required to reconstruct the original boot environment after the UBI conversion.
+Some preserved data may also be specific to the physical router, including hardware calibration information and identifiers. A backup from another Linksys E8450 should not be treated as an equivalent replacement.
 
----
+### Why the backup is important
 
-### Why the Backup Is Important
+Returning an E8450 to Linksys firmware after UBI conversion is more involved than uploading a vendor firmware image through LuCI. The original boot information in `boot_backup` can be required to reconstruct the Linksys flash layout and may also be valuable during advanced recovery if the bootloader, layout, or other critical partitions become damaged.
 
-Installing OpenWrt using the UBI installer fundamentally changes how the E8450's NAND flash is organized.
+Leaving the only copy on the router is inadequate: storage failure, accidental erasure, or unnecessarily rerunning the installer could destroy it. Treat the externally stored copy as a permanent recovery asset belonging to that specific router.
 
-Returning the router to factory Linksys firmware is therefore more involved than simply uploading a Linksys firmware image through LuCI or another web interface.
+### Copy the backup
 
-The original boot information preserved in `boot_backup` can be required as part of the process of reconstructing the original Linksys flash layout and restoring the vendor firmware.
+1. Connect to the router over SSH as `root`.
 
-The backup may also be valuable during advanced recovery procedures if the router's boot environment becomes damaged.
+2. Create a temporary mount point and mount the installer-created `boot_backup` volume:
 
-For this reason, the contents of `boot_backup` should be treated as a permanent recovery asset associated with that specific router.
-
----
-
-### Copy the Backup Off the Router
-
-Leaving the backup only on the router does **not** provide adequate protection.
-
-After the initial OpenWrt installation, mount the `boot_backup` volume:
-
-```sh
-mkdir /tmp/boot_backup
-mount -t ubifs ubi0:boot_backup /tmp/boot_backup
-```
-
-The contents can then be inspected with:
-
-```sh
-ls -lh /tmp/boot_backup
-```
-
-The files should then be copied to another computer or other protected storage, for example using SCP.
-
-The externally stored copy should be clearly associated with the specific physical router from which it was obtained.
-
-> [!IMPORTANT]
->
-> Do not assume that a backup obtained from another Linksys E8450 is an acceptable replacement. Treat each router's backup as device-specific and preserve it accordingly.
-
----
-
-### Do Not Run the UBI Installer Again Unnecessarily
-
-The initial UBI installer is intended primarily for converting the router from the factory Linksys layout to the OpenWrt UBI layout.
-
-The installation sequence is approximately:
-
-```text
-Factory Linksys Router
-        │
-        ▼
-Run UBI Installer
-        │
-        ├──── Preserve original Linksys boot chain
-        │                  │
-        │                  ▼
-        │            UBI: boot_backup
-        │
-        ├──── Convert NAND to UBI
-        │
-        ├──── Install OpenWrt boot chain
-        │
-        ▼
-OpenWrt UBI Layout
-```
-
-Running the installer again later can replace the contents of `boot_backup`. If the original backup has not already been copied elsewhere, the original factory boot information may therefore be lost.
-
-Consequently, the UBI installer should **not** be treated as the normal method for upgrading an E8450 that has already been converted to the OpenWrt UBI layout.
-
----
-
-### Normal OpenWrt Upgrades
-
-After the initial UBI conversion has been completed, normal OpenWrt upgrades should use the appropriate sysupgrade image, such as:
-
-```text
-linksys_e8450-ubi-squashfs-sysupgrade.itb
-```
-
-The UBI recovery installer should only be run again when there is a specific reason to do so, such as when OpenWrt documentation for a particular upgrade explicitly requires an updated installer because of changes to the bootloader or flash layout.
-
----
-
-### Recommended Backup Policy
-
-The `boot_backup` should be copied off the router **immediately after the initial UBI installation**.
-
-A good installation workflow is:
-
-1. Install the OpenWrt UBI recovery installer.
-2. Allow the router to boot into the new OpenWrt environment.
-3. Mount the `boot_backup` UBI volume.
-4. Copy the complete contents of `boot_backup` to protected external storage.
-5. Clearly identify the backup with the specific router it came from.
-6. Verify that the copied files are readable and retained in a location that will not be accidentally deleted.
-7. Only then continue with normal router provisioning and configuration.
-
-> [!IMPORTANT]
->
-> **The `boot_backup` created during the initial OpenWrt UBI installation is a device-specific recovery asset. It preserves the original vendor boot-chain information before OpenWrt replaces the Linksys boot environment. Copy this backup off the router and retain it permanently. Do not rely on the copy stored on the router as the only backup.**
-
----
-  
-1. SSH into the router using Putty or terminal. Make a backup of the bootchain as shown below.
+    ```sh
+    mkdir -p /tmp/boot_backup
+    mount -t ubifs ubi0:boot_backup /tmp/boot_backup
+    ```
 
     ![Back up the bootchain over SSH](../screenshots/linksys-e8450-backup-bootchain-ssh.png)
-  
-2. Copy `MTD` files out using scp and and save them in a secure location, indicating which serial number these files belong to. **NOTE**: Since Installer v1.1.x, the boot backups are stored solely in `mtd0` and `mtd1`, so if those are the only 2 files in the **boot_backup** directory, this is expected. The screenshots below was taken during an installation while using v1.0.2 installer which stored the backup in 4 files (`mtd0`, `mtd1`, `mtd2`, & `mtd3`).
+
+3. Confirm that the backup files are present:
+
+    ```sh
+    ls -lh /tmp/boot_backup
+    ```
+
+4. Copy every file from `/tmp/boot_backup` to another computer using SCP, WinSCP, or an equivalent tool.
+
+    For example, from a computer with `scp`:
+
+    ```sh
+    scp root@<router-ip>:/tmp/boot_backup/* <local-backup-directory>/
+    ```
 
     ![Copy the bootchain backup with SCP](../screenshots/linksys-e8450-copy-bootchain-scp.png)
 
+5. Verify that the copied files can be read, then label the backup with the router's model and serial number. Store it in a protected location that is backed up separately.
 
-<div style="page-break-after: always;"></div>
-  
-  
-## Custom image installation
-A custom firmware image is a version of OpenWrt that has been pre-built with specific packages, configurations, and features already included. Instead of starting with a generic, default system and manually configuring each setting, the image is tailored ahead of time to meet a particular need or application.
+> [!NOTE]
+>
+> With installer v1.1.x and newer, `boot_backup` may contain only `mtd0` and `mtd1`. Older installers may have created `mtd0`, `mtd1`, `mtd2`, and `mtd3`. Copy every file that exists; do not substitute files from another router.
 
-This approach is useful because it shifts the work from repetitive manual setup to a one-time, controlled build process. The result is a ready-to-deploy system that behaves predictably across all devices it is installed on.
+### Do not rerun the installer unnecessarily
 
-For end users, this provides several practical advantages:
+The UBI installer is for the initial conversion from the Linksys flash layout to OpenWrt UBI. Running it again can replace the contents of `boot_backup` and destroy the only on-router copy of the original vendor bootchain.
 
-- ⚙️ Reduced setup time – devices are ready to use immediately after flashing
-- 🔁 Consistency – every device runs the same configuration, eliminating variation
-- 🧩 Pre-installed features – required tools and services are already included
-- 🛠️ Simplified support – standardized systems are easier to troubleshoot and maintain
-- 🔒 Controlled environment – only the necessary components are included, reducing complexity and potential issues
-
-In short, a custom image allows systems to be deployed quickly, reliably, and with confidence that they will operate exactly as intended.
-
-The custom image can be selected immediately after the one-time UBI installer in step 14 above. The steps below cover installing it later on a Linksys E8450 that already runs a compatible OpenWrt UBI image.
-  
-`System > Backup/Flash Firmware`
-  
-![OpenWrt Backup and Flash Firmware page](../screenshots/linksys-e8450-openwrt-flash-firmware.png)
-  
-`Flash new firmware image > Flash image…`
-  
-![OpenWrt flash image dialog](../screenshots/linksys-e8450-openwrt-flash-image-dialog.png)
-  
-`Browse…`
-  
-![Select the OpenWrt sysupgrade image](../screenshots/linksys-e8450-select-sysupgrade-image.png)
-  
-Select the Calvary custom image, `Calvary-openwrt-24.10.5-mediatek-mt7622-linksys_e8450-ubi-squashfs-sysupgrade.itb`
-  
-![Select the custom sysupgrade image](../screenshots/linksys-e8450-select-custom-sysupgrade-image.png)
-  
-`Upload`
-  
-![OpenWrt flash image confirmation](../screenshots/linksys-e8450-flash-image-confirmation.png)
-  
-`Do not retain any settings. Continue.`
-  
-![Disable the keep settings option](../screenshots/linksys-e8450-disable-keep-settings.png)
-
-
-<div style="page-break-after: always;"></div>
+After conversion, use the appropriate `linksys_e8450-ubi-squashfs-sysupgrade.itb` image for normal upgrades. Run another installer only when current upstream OpenWrt instructions explicitly require a bootloader or flash-layout migration, and make sure the original backup already exists off the router.
 
 # Related Documentation
 
