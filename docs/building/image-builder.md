@@ -115,7 +115,7 @@ Successful builds are copied to:
 output/
 ```
 
-For a normal upgrade of an E8450 that already uses the compatible UBI layout, the relevant artifact is the file ending in:
+For a normal upgrade of an E8450 that already uses the current UBI layout, the relevant artifact is the file ending in:
 
 ```text
 linksys_e8450-ubi-squashfs-sysupgrade.itb
@@ -128,7 +128,7 @@ Before distributing an image:
 3. Test the image on the intended hardware and upgrade path.
 4. Publish the tested artifact through a release; do not commit it.
 
-Follow the [final firmware installation instructions](../getting-started/flashing-e8450.md#install-the-final-firmware) when flashing it.
+First [determine the router's upgrade path](../getting-started/flashing-e8450.md#determine-your-upgrade-path). Follow the [final firmware installation instructions](../getting-started/flashing-e8450.md#install-the-final-firmware) only after any required layout migration is complete.
 
 ## Changing the image
 

@@ -6,7 +6,11 @@ Start here when installing or deploying the custom image on a Linksys E8450 / Be
 
 Follow [Flashing the Linksys E8450](flashing-e8450.md). The first-time process converts the router to the OpenWrt UBI layout and includes a required backup of its device-specific vendor bootchain.
 
-## Router already running compatible OpenWrt UBI firmware
+## Router running OpenWrt 23.05.x or an older snapshot
+
+Do not flash an OpenWrt 24.10.x-based image directly. Start with [Determine your upgrade path](flashing-e8450.md#determine-your-upgrade-path), preserve the vendor bootchain backup, and follow the current upstream layout-migration instructions.
+
+## Router running OpenWrt 24.10.x or the current UBI layout
 
 Go directly to [Install the final firmware](flashing-e8450.md#install-the-final-firmware). Do not run the UBI installer again unless current upstream migration instructions explicitly require it.
 

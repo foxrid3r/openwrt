@@ -22,7 +22,9 @@ Use this checklist before publishing repository changes or a firmware release.
 
 ## Release notes
 
-- [ ] State the required starting firmware/layout and whether settings must be retained.
+- [ ] State the required starting OpenWrt version and UBI layout.
+- [ ] State whether an installer migration is required or explicitly prohibited.
+- [ ] State whether settings must be retained.
 - [ ] Link to the [flashing guide](docs/getting-started/flashing-e8450.md).
 - [ ] List important default behavior and any breaking configuration changes.
 - [ ] Attach checksums and tested firmware artifacts to the release rather than committing them.

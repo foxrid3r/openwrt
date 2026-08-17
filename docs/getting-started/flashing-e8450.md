@@ -3,20 +3,42 @@ Wall time: 0.6 seconds
 Output:
 # Flashing OpenWrt on the Linksys E8450
 
-This guide covers two different starting points. Choose the one that matches the router now:
+## Determine your upgrade path
 
-| Current state | Follow |
+The correct procedure depends on the firmware and flash layout currently installed on the router.
+
+| Current router state | Required action |
 |---|---|
-| Stock Linksys firmware | [Run the one-time installer, then choose stock OpenWrt or the custom image](#first-time-openwrt-installation) |
-| Compatible OpenWrt UBI installation | [Install the final firmware](#install-the-final-firmware) |
+| Stock Linksys firmware | [Run the one-time installer](#first-time-openwrt-installation), then install official OpenWrt or the custom image |
+| OpenWrt 23.05.x or older | [Migrate the older OpenWrt layout](#migrate-an-older-openwrt-layout) before installing an OpenWrt 24.10.x-or-newer image |
+| OpenWrt snapshot from before February 15, 2024 | [Migrate the older OpenWrt layout](#migrate-an-older-openwrt-layout) before installing a newer image |
+| OpenWrt 24.10.x | Do not rerun the installer; go to [Install the final firmware](#install-the-final-firmware) |
+| OpenWrt snapshot using the post-February 2024 layout | Do not rerun the installer; go to [Install the final firmware](#install-the-final-firmware) |
+| OpenWrt 23.05.x upgrading only to 23.05.4 | The layout-migration installer is not required |
+
+> [!WARNING]
+> OpenWrt 23.05.x and snapshots from before [February 15, 2024](https://git.openwrt.org/?p=openwrt/openwrt.git;a=commitdiff;h=6aec3c7b5bf5e5a999a12121dfa71963afb6f003) use the older E8450 UBI layout. OpenWrt 24.10.x and newer images require the layout that places the FIP and factory data in UBI. Do not flash a 24.10.x-based sysupgrade image directly over the older layout.
 
 > [!IMPORTANT]
 > The E8450 installation and migration requirements can change. Before flashing, compare this guide with the current [OpenWrt device page](https://openwrt.org/toh/linksys/e8450) and [official UBI installer documentation](https://github.com/dangowrt/owrt-ubi-installer). Those upstream sources take precedence for installer choice and layout migrations.
   
 > [!CAUTION]
 > Do not use installer v1.0.3. Select the current installer release recommended by the upstream UBI installer project; do not rely on a version number copied from an older guide. The installer changes the bootloader and flash layout and normally must be run only once per device.
-  
-# First-time OpenWrt installation
+
+## Migrate an older OpenWrt layout
+
+This path applies when upgrading OpenWrt 23.05.x or older—or a snapshot from before February 15, 2024—to OpenWrt 24.10.x or a newer release.
+
+1. [Copy the existing vendor bootchain backup off the router](#back-up-the-stockvendor-bootchain) before changing the layout. Verify the files and retain them permanently.
+2. Read the current [OpenWrt E8450 migration instructions](https://openwrt.org/toh/linksys/e8450).
+3. Download the installer currently recommended by the [E8450 UBI installer project](https://github.com/dangowrt/owrt-ubi-installer/releases).
+4. Follow the upstream instructions to run that installer once.
+5. Continue with [Install the final firmware](#install-the-final-firmware).
+
+> [!CAUTION]
+> Once the router uses the current UBI layout, do not run the installer again unless new upstream instructions explicitly require another bootloader or layout migration. Use normal E8450 UBI sysupgrade images for subsequent upgrades.
+
+## First-time OpenWrt installation
 
 1. Factory Reset the router by holding down the reset button until the Power LED indicator starts blinking. Wait for the device to reset. If the device is brand new, this step is not required.
   
@@ -94,7 +116,7 @@ This guide covers two different starting points. Choose the one that matches the
 
 ## Install the final firmware
 
-Continue here after the one-time installer. If the router already runs a compatible OpenWrt UBI image, you can skip the installer steps, sign in to LuCI, and begin here instead.
+Continue here after the one-time installer or an explicitly required layout migration. If the router already runs OpenWrt 24.10.x or another release using the current UBI layout, skip the installer, sign in to LuCI, and begin here instead.
 
 13. Navigate to `System -> Backup / Flash Firmware`.
 
