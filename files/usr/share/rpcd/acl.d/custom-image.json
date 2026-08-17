@@ -1,0 +1,13 @@
+{
+    "custom-image-info": {
+        "description": "Grant read access to custom image information",
+        "read": {
+            "file": {
+                "/etc/custom-image.json": [ "read" ]
+            },
+            "ubus": {
+                "file": [ "read" ]
+            }
+        }
+    }
+}

@@ -13,11 +13,11 @@ VERSION="${1:-}"
 OPENWRT_VERSION="${2:-24.10.5}"
 
 if [[ -z "$VERSION" ]]; then
-  read -r -p "Enter custom image version (e.g. 1.6.1): " VERSION
+  read -r -p "Enter custom image version (e.g. 1.6.5): " VERSION
 fi
 [[ -n "$VERSION" ]] || { echo "ERROR: image version cannot be empty." >&2; exit 1; }
 
-BUILD_DATE="$(date '+%Y-%m-%d %H:%M')"
+BUILD_DATE="$(date '+%Y-%m-%d %H:%M %Z')"
 BUILD_FILENAME_DATE="$(date '+%Y-%m-%d_%H-%M-%S')"
 IMAGE_NAME="invio_v${VERSION}_${BUILD_FILENAME_DATE}"
 ARCHIVE="openwrt-imagebuilder-${OPENWRT_VERSION}-${TARGET}-${SUBTARGET}.Linux-x86_64.tar.zst"
@@ -76,6 +76,17 @@ update_banner_field() {
 update_banner_field "$BANNER_FILE" "__VERSION__" "$VERSION"
 update_banner_field "$BANNER_FILE" "__OPENWRT_VERSION__" "$OPENWRT_VERSION"
 update_banner_field "$BANNER_FILE" "__BUILD_DATE__" "$BUILD_DATE"
+
+# Generate custom image metadata displayed in LuCI.
+CUSTOM_IMAGE_FILE="$IMAGEBUILDER_DIR/files/etc/custom-image.json"
+
+cat > "$CUSTOM_IMAGE_FILE" <<EOF
+{
+    "name": "INVIO Automation OpenWrt",
+    "version": "$VERSION",
+    "build_date": "$BUILD_DATE"
+}
+EOF
 
 find "$IMAGEBUILDER_DIR/files/usr/bin" "$IMAGEBUILDER_DIR/files/usr/sbin" -type f -exec chmod 0755 {} +
 chmod 0755 "$IMAGEBUILDER_DIR/files/etc/hotplug.d/block/99-usb-alias" \
