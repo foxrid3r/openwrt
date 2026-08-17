@@ -6,7 +6,7 @@ This directory contains the files used to build the custom OpenWrt firmware imag
 
 ### `build.sh`
 
-Downloads the requested OpenWrt ImageBuilder, verifies the download, applies the project's filesystem overlay, generates the versioned login banner, and builds the custom Linksys E8450 firmware image.
+Downloads the requested OpenWrt ImageBuilder, verifies the download, applies the project's filesystem overlay, generates the versioned login banner and LuCI build metadata, and builds the custom Linksys E8450 firmware image.
 
 Run the script from the repository root:
 

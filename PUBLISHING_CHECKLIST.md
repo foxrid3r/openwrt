@@ -13,6 +13,7 @@ Use this checklist before publishing repository changes or a firmware release.
 ## Firmware
 
 - [ ] The intended custom-image and OpenWrt versions appear in the filename and login banner.
+- [ ] LuCI displays the expected custom-image name, image version, and build date under **Status → Overview → System**.
 - [ ] The image was produced from a known commit with a clean or documented worktree.
 - [ ] A SHA-256 checksum was recorded.
 - [ ] The sysupgrade image was tested on the intended E8450 UBI upgrade path.

@@ -110,11 +110,13 @@ See the [Tool Reference](../docs/tools/README.md) for descriptions and usage.
 
 ## `usr/share`
 
-Contains supporting files used by OpenWrt and the custom tools, including firewall/nftables configuration.
+Contains supporting files used by OpenWrt and the custom tools, including firewall/nftables configuration and the rpcd ACL that lets LuCI read custom image metadata.
 
 ## `www`
 
-Contains files used by the LuCI web interface and other web-accessible resources included with the image.
+Contains files used by the LuCI web interface and other web-accessible resources included with the image. The custom System status component displays the image name, version, and build date from `/etc/custom-image.json`.
+
+See [LuCI Build Information](../docs/custom-image/luci-build-info.md) for the displayed fields and [LuCI build metadata](../docs/building/image-builder.md#luci-build-metadata) for implementation details.
 
 ## Important
 

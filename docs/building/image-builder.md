@@ -72,6 +72,41 @@ Example:
 
 The script uses `${TMPDIR:-/tmp}/openwrt-build` as disposable workspace. It recreates that directory on each run.
 
+### LuCI build metadata
+
+During the build, `build.sh` generates `/etc/custom-image.json` in the temporary filesystem overlay. The file records the custom image name, the version passed to the script, and the build date:
+
+```json
+{
+    "name": "INVIO Automation OpenWrt",
+    "version": "1.6.1",
+    "build_date": "2026-08-17 10:30 EDT"
+}
+```
+
+The metadata flows through the image as follows:
+
+```text
+build/build.sh
+      |
+      v
+/etc/custom-image.json
+      |
+      v
+LuCI System status component
+      |
+      v
+Status -> Overview -> System
+```
+
+| Repository path | Purpose |
+|---|---|
+| `build/build.sh` | Generates the metadata file for each build |
+| `files/www/luci-static/resources/view/status/include/10_system.js` | Reads the file and adds the custom fields to LuCI's System panel |
+| `files/usr/share/rpcd/acl.d/custom-image.json` | Grants authenticated LuCI sessions read access to the metadata file |
+
+The LuCI component displays `?` when a field is absent or the metadata cannot be read or parsed. See [LuCI Build Information](../custom-image/luci-build-info.md) for the user-facing behavior.
+
 ## 4. Find and verify the result
 
 Successful builds are copied to:
@@ -88,7 +123,7 @@ linksys_e8450-ubi-squashfs-sysupgrade.itb
 
 Before distributing an image:
 
-1. Confirm the filename contains the intended OpenWrt and custom-image versions.
+1. Confirm the filename, login banner, and LuCI build information contain the intended versions.
 2. Record a checksum, for example with `sha256sum output/<filename>`.
 3. Test the image on the intended hardware and upgrade path.
 4. Publish the tested artifact through a release; do not commit it.

@@ -25,6 +25,7 @@ Factory passwords are listed in the repository [README](../../README.md#factory-
 | [NTP uplink](ntp-uplink.md) | Isolated upstream time synchronization and local NTP service |
 | [FTP service](ftp-service.md) | Restricted file transfer to USB-backed storage |
 | [USB storage](usb-storage.md) | exFAT automount, safe removal, and file organization |
+| [LuCI build information](luci-build-info.md) | Installed custom-image name, version, and build date |
 
 ## Included tools
 
