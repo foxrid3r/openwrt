@@ -73,12 +73,7 @@ This guide covers two different starting points. Choose the one that matches the
 
     ![Linksys stock firmware upgrade page](../screenshots/linksys-e8450-stock-firmware-upgrade.png)
   
-10. Upload the firmware **installer** image. This one-time installer converts the router's NAND flash layout to UBI and starts the OpenWrt recovery environment. From that recovery environment, you can install either:
-
-    - An official, unmodified OpenWrt sysupgrade image; or
-    - This repository's custom OpenWrt sysupgrade image.
-
-    You do not need to install official OpenWrt first if your goal is to use the custom image. Both choices use an E8450 UBI sysupgrade image and follow the same upload process below.
+10. Upload the firmware **installer** image. This one-time installer converts the router's NAND flash layout to UBI and starts the OpenWrt recovery environment. It is not the final OpenWrt firmware image.
   
     - If running stock **firmware < 1.2.00.273012**, upload the **unsigned** image: `openwrt-...-mediatek-mt7622-linksys_e8450-ubi-initramfs-recovery-installer.itb`
   
@@ -99,6 +94,8 @@ This guide covers two different starting points. Choose the one that matches the
     ![OpenWrt Backup and Flash Firmware page](../screenshots/linksys-e8450-openwrt-flash-firmware.png)
   
 14. Choose and upload one of the following E8450 UBI sysupgrade images:
+
+    At this stage, the installer has finished its job and the router is ready for its final firmware. If you want the custom image, you may install it directly; installing official OpenWrt first is not required.
 
     | Choice | Image |
     |---|---|
