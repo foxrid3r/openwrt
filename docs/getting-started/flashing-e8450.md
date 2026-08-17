@@ -156,6 +156,10 @@ Continue here after the one-time installer or an explicitly required layout migr
 > Do not skip this backup. The UBI installer preserves the router's original vendor bootchain in a `boot_backup` volume before replacing the Linksys boot environment. This data is specific to the individual router and may be required to restore vendor firmware or perform advanced recovery.
 >
 > A downloaded Linksys firmware image is not an equivalent replacement for `boot_backup`. Copy the backup off the router immediately after the first OpenWrt installation and retain it permanently.
+>
+> If the stock bootchain has already been verified to exist in a safe and permanent location, then there is no need to make another backup.
+>
+>If an installer has been run more than once on the device, the stock bootchain cannot be recovered from the device.
 
 ### Overview
 
