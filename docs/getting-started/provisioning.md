@@ -242,7 +242,7 @@ The uplink SSID is accepted as entered because it must match an external network
 
 When changing only the uplink password, the utility preserves the interface's existing encryption mode.
 
-The NTP uplink is intentionally isolated from the machine LAN and permits only DHCP plus NTP traffic to the configured upstream servers. It does not provide a default route, DNS, or general Internet access unless [temporary maintenance access](../custom-image/ntp-uplink.md#temporary-maintenance-access) is enabled. See [NTP](../custom-image/ntp-uplink.md) for the complete policy.
+The NTP uplink is intentionally isolated from the machine LAN and permits only DHCP plus NTP traffic to the configured upstream servers. It accepts a DHCP default route for gateway reachability but does not accept peer DNS or permit general Internet traffic unless [temporary maintenance access](../custom-image/ntp-uplink.md#temporary-maintenance-access) is enabled. See [NTP](../custom-image/ntp-uplink.md) for the complete policy.
 
 ## Applying Changes
 

@@ -27,13 +27,5 @@ config interface 'lan'
 config interface 'ntp_uplink'
 	option proto 'dhcp'
 	option peerdns '0'
-	option defaultroute '0'
+	option defaultroute '1'
 	option metric '50'
-
-config route
-	option interface 'ntp_uplink'
-	option target '129.6.15.28/32'
-
-config route
-	option interface 'ntp_uplink'
-	option target '132.163.96.1/32'
