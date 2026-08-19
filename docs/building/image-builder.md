@@ -14,6 +14,51 @@ This guide reproduces the repository's Linksys E8450 UBI firmware. The build scr
 
 ## 1. Prepare Linux
 
+### WSL setup
+
+Skip this subsection when using native Linux. From PowerShell, install and start Ubuntu if needed:
+
+```powershell
+wsl --install -d Ubuntu-24.04
+wsl -d Ubuntu-24.04
+```
+
+OpenWrt build tools require paths without spaces and should not be run as `root`. WSL normally appends the Windows `PATH`, which often introduces entries such as `/mnt/c/Program Files/...`. In Ubuntu, identify your normal Linux username:
+
+```bash
+whoami
+```
+
+If that command reports `root`, create or select a normal WSL user before continuing. Then edit `/etc/wsl.conf` with `sudo` and preserve any unrelated settings already present:
+
+```ini
+[interop]
+appendWindowsPath=false
+
+[user]
+default=your-wsl-username
+```
+
+Replace `your-wsl-username` with the result from `whoami`. The filename is `/etc/wsl.conf`; `wsl.config` is not a recognized WSL configuration file. The build does not require systemd, and Windows-drive automount does not need to be disabled as long as the repository and build workspace remain in the Linux filesystem.
+
+Apply the configuration by leaving WSL and running the following from PowerShell:
+
+```powershell
+wsl --shutdown
+wsl -d Ubuntu-24.04
+```
+
+Back in WSL, verify the user and inspect each `PATH` entry:
+
+```bash
+whoami
+printf '%s\n' "$PATH" | tr ':' '\n'
+```
+
+The user must not be `root`, and no entry should contain spaces or refer to a Windows path under `/mnt/c`. A typical clean `PATH` contains Linux directories such as `/usr/local/sbin`, `/usr/local/bin`, `/usr/sbin`, `/usr/bin`, `/sbin`, and `/bin`.
+
+### Install dependencies
+
 On Ubuntu 24.04 or a similar Debian-based distribution:
 
 ```bash
@@ -22,16 +67,9 @@ sudo apt install build-essential file libncurses-dev zlib1g-dev gawk git \
   gettext libssl-dev xsltproc rsync wget unzip python3 python3-setuptools zstd
 ```
 
-### WSL setup
+### Check out the repository
 
-From PowerShell, install and start Ubuntu if needed:
-
-```powershell
-wsl --install -d Ubuntu-24.04
-wsl -d Ubuntu-24.04
-```
-
-Clone or copy this repository into the WSL filesystem:
+Clone or copy this repository into the Linux filesystem. Under WSL, do not use a Windows-mounted path such as `/mnt/c/...`:
 
 ```bash
 mkdir -p ~/src
@@ -159,6 +197,16 @@ Confirm the package exists for the selected OpenWrt release and `mediatek/mt7622
 ### Files are missing or have the wrong case
 
 Build from a case-sensitive Linux filesystem. Windows-mounted paths under `/mnt/c` can cause subtle ImageBuilder failures.
+
+### The build reports spaces in `PATH`
+
+Windows directories have probably been appended to the WSL environment. Set `appendWindowsPath=false` in `/etc/wsl.conf`, shut down WSL with `wsl --shutdown` from PowerShell, and start the distribution again. Confirm each entry with:
+
+```bash
+printf '%s\n' "$PATH" | tr ':' '\n'
+```
+
+Also ensure the repository, `TMPDIR`, and current working directory do not contain spaces.
 
 ### The image is too large
 
