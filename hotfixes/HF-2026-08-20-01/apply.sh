@@ -24,7 +24,6 @@ fail() {
 command -v uci >/dev/null 2>&1 || fail "uci is not installed"
 command -v ifup >/dev/null 2>&1 || fail "ifup is not installed"
 command -v jsonfilter >/dev/null 2>&1 || fail "jsonfilter is not installed"
-command -v install >/dev/null 2>&1 || fail "install is not installed"
 
 [ -r /etc/custom-image.json ] || fail "/etc/custom-image.json is not readable"
 installed_image_version="$(
@@ -136,10 +135,19 @@ if ! grep -Fq "$HOTFIX_ID" /etc/banner; then
 	} >>/etc/banner
 fi
 
-install -m 0644 \
+copy_payload() {
+	source="$1"
+	destination="$2"
+	temporary="$destination.tmp.$$"
+	cp "$source" "$temporary"
+	chmod 0644 "$temporary"
+	mv "$temporary" "$destination"
+}
+
+copy_payload \
 	"$SCRIPT_DIR/payload/www/luci-static/resources/view/status/include/10_system.js" \
 	"$LUCI_VIEW"
-install -m 0644 \
+copy_payload \
 	"$SCRIPT_DIR/payload/usr/share/rpcd/acl.d/custom-image.json" \
 	"$RPCD_ACL"
 
