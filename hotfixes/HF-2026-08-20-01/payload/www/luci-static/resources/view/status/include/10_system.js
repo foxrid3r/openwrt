@@ -123,3 +123,4 @@ return baseclass.extend({
 		return table;
 	}
 });
+

@@ -68,6 +68,7 @@ Build inputs are defined by the [package list](build/packages.txt) and [filesyst
 | [`docs/`](docs/README.md) | Installation, operation, feature, and build documentation |
 | [`build/`](build/README.md) | Build script and package selection |
 | [`files/`](files/README.md) | Files copied into the image's root filesystem |
+| [`hotfixes/`](hotfixes/README.md) | Versioned fixes for already-deployed images |
 | `output/` | Locally generated firmware; not committed |
 
 Before publishing, complete the [repository sanitization review](SANITIZATION.md) and [publishing checklist](PUBLISHING_CHECKLIST.md). Tested firmware images should be distributed through GitHub Releases, not committed to the repository.
