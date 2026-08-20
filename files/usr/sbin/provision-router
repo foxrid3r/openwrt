@@ -486,7 +486,9 @@ if [ "$do_ssid" -eq 1 ] || [ "$do_wifi_pass" -eq 1 ] || [ "$do_uplink_ssid" -eq 
   wifi reload >/dev/null 2>&1 || true
 fi
 
-if [ "$do_dhcp" -eq 1 ]; then
+# dnsmasq reads the router hostname when it starts. Restart it after either a
+# hostname or DHCP change so clients can resolve the current <hostname>.lan.
+if [ "$do_host" -eq 1 ] || [ "$do_dhcp" -eq 1 ]; then
   /etc/init.d/dnsmasq restart >/dev/null 2>&1 || true
 fi
 

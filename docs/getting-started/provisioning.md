@@ -253,11 +253,15 @@ Depending on what was changed, the utility may:
 - Commit `dhcp` configuration changes.
 - Commit `wireless` configuration changes.
 - Reload Wi-Fi.
-- Restart `dnsmasq`.
+- Restart `dnsmasq` after a hostname or DHCP change.
 - Restart the network service.
 - Change the root password.
 
 If the LAN IP or netmask changes, the SSH connection may be interrupted.
+
+After a hostname change, dnsmasq is restarted so clients can resolve the new
+`<hostname>.lan` name. Bare-hostname resolution depends on the client's DHCP
+search-domain behavior.
 
 ## After Changing the LAN IP
 
