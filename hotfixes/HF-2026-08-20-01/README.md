@@ -28,11 +28,12 @@ Hotfix state is stored separately from the immutable image identity in
 
 ## Install
 
-Download `HF-2026-08-20-01.tar.gz` and its checksum from the GitHub release,
-then copy both to the router:
+Download `HF-2026-08-20-01.tar.gz` and
+`HF-2026-08-20-01.tar.gz.sha256` from the GitHub release, then copy both to the
+router:
 
 ```sh
-scp HF-2026-08-20-01.tar.gz* root@<router-ip>:/tmp/
+scp HF-2026-08-20-01.tar.gz HF-2026-08-20-01.tar.gz.sha256 root@<router-ip>:/tmp/
 ssh root@<router-ip>
 ```
 
@@ -100,11 +101,15 @@ cd /tmp/HF-2026-08-20-01
 From the repository root on Linux or WSL:
 
 ```sh
-tar -C hotfixes -czf HF-2026-08-20-01.tar.gz HF-2026-08-20-01
+git -c core.autocrlf=false archive \
+  --format=tar.gz \
+  --prefix=HF-2026-08-20-01/ \
+  -o HF-2026-08-20-01.tar.gz \
+  hotfix-HF-2026-08-20-01:hotfixes/HF-2026-08-20-01
 sha256sum HF-2026-08-20-01.tar.gz > HF-2026-08-20-01.tar.gz.sha256
 ```
 
 Create an annotated Git tag named `hotfix-HF-2026-08-20-01`, push it, and
-create a draft GitHub release with `--verify-tag --latest=false`. Attach both
-files and use this document as the release notes. Inspect the draft before
-publishing it. Do not commit the generated archive.
+create a draft GitHub release with `--verify-tag --latest=false`. Attach the
+tarball and its `.sha256` sidecar, and use this document as the release notes.
+Inspect the draft before publishing it. Do not commit the generated archive.
