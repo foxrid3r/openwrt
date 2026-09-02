@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 0.6 seconds
-Output:
 # Flashing OpenWrt on the Linksys E8450
 
 ## Determine your upgrade path
