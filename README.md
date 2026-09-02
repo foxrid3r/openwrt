@@ -52,10 +52,10 @@ Build inputs are defined by the [package list](build/packages.txt) and [filesyst
 
 ## Factory credentials
 
-| Service | Username | Factory password |
+| Service | Username/SSID | Factory password |
 |---|---|---|
 | SSH / LuCI | `root` | `Admin12345!` |
-| Machine Wi-Fi | — | `Admin12345!` |
+| Machine Wi-Fi | Spare1 | `Admin12345!` |
 | FTP | `admin` | `admin` |
 
 > [!IMPORTANT]
