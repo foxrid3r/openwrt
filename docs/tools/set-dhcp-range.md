@@ -1,8 +1,8 @@
-# `set-dhcp-range` --- OpenWrt DHCP Pool Configuration Utility (Version 5)
+# DHCP Pool Configuration Utility
 
 ## Overview
 
-`set-dhcp-range` is an interactive shell utility used to configure DHCP
+The custom image provides the `set-dhcp-range` tool which is an interactive shell utility used to configure DHCP
 address pools on OpenWrt routers.
 
 The script supports two operating modes:

@@ -1,6 +1,6 @@
-# `provision-router`
+# Provision Router
 
-`provision-router` interactively changes the deployment-specific settings of a newly flashed router.
+The custom image provides the `provision-router` tool which should be used to interactively changes the deployment-specific settings of a newly flashed router.
 
 ```sh
 provision-router
